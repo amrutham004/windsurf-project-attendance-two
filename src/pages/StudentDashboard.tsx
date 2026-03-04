@@ -3,7 +3,6 @@ import Header from '@/components/attendance/Header';
 import Footer from '@/components/attendance/Footer';
 import Scene3D from '@/components/3d/Scene3D';
 import FloatingCard from '@/components/3d/FloatingCard';
-import GlassButton from '@/components/3d/GlassButton';
 import { Input } from '@/components/ui/input';
 import { 
   getStudentStats, 
@@ -11,7 +10,7 @@ import {
   getAttendanceRecords
 } from '@/lib/attendanceData';
 import { StudentStats, Student, AttendanceRecord } from '@/types/attendance';
-import { Search, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { User, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 const StudentDashboard = () => {
   const [studentId, setStudentId] = useState('');
@@ -54,36 +53,40 @@ const StudentDashboard = () => {
 
       <main className="container relative z-10 py-8 max-w-4xl mx-auto px-4 flex-1">
         {/* Page Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-white mb-3">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">
             Student Dashboard
           </h1>
-          <p className="text-teal-100/80">
-            Search for a student to view their attendance statistics and performance
+          <p className="text-teal-100/70 text-sm">
+            View your attendance history and statistics
           </p>
         </div>
 
         {/* Search Form */}
-        <FloatingCard className="mb-8">
+        <FloatingCard className="mb-6 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
           <form onSubmit={handleSearch}>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="text-teal-200 text-sm mb-2 block">Student ID</label>
+            <div className="mb-2">
+              <label className="text-teal-100 text-sm mb-2 block font-medium">Enter Your Student ID</label>
+              <div className="flex gap-3">
                 <Input
                   type="text"
-                  placeholder="Enter Student ID (e.g., 20221CIT0043)"
+                  placeholder="20221CIT0043"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
-                  className="bg-teal-900/30 border-teal-700/50 text-white placeholder-teal-300/50 h-12"
+                  className="flex-1 bg-white/10 border-teal-500/30 text-white placeholder-teal-200/40 h-11 rounded-xl focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20"
                 />
+                <button
+                  type="submit"
+                  disabled={!studentId.trim()}
+                  className="px-6 h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  View Dashboard
+                </button>
               </div>
-              <GlassButton disabled={!studentId.trim()} className="px-6 h-12 mt-7">
-                <Search size={18} className="mr-2" />
-                Search
-              </GlassButton>
+              <p className="text-teal-200/50 text-xs mt-2">Enter IDs: 20221CIT0043, 20221CIT0044, 20221CIT0045, 20221CIT0046</p>
             </div>
             {error && (
-              <div className="mt-4 bg-red-500/20 border border-red-500/30 rounded-lg p-3 text-red-300 text-sm">
+              <div className="mt-3 bg-red-500/20 border border-red-400/30 rounded-xl p-3 text-red-200 text-sm">
                 {error}
               </div>
             )}
@@ -92,128 +95,145 @@ const StudentDashboard = () => {
 
         {/* Student Results */}
         {searchedStudent && stats && (
-          <div className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Attendance Rate Card */}
-              <FloatingCard className="flex flex-col items-center justify-center p-6">
-                <h3 className="text-sm font-medium text-white mb-4">Attendance Rate</h3>
-                <div className="relative w-32 h-32">
-                  <svg className="w-32 h-32 transform -rotate-90">
+          <div className="space-y-5">
+            {/* Student Info Card */}
+            <FloatingCard className="bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-teal-500/30 flex items-center justify-center">
+                    <User size={28} className="text-teal-200" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{searchedStudent.name}</h2>
+                    <p className="text-teal-200/70 text-sm">ID: {searchedStudent.id} • Grade: {searchedStudent.grade}</p>
+                  </div>
+                </div>
+                <div className="relative w-20 h-20">
+                  <svg className="w-20 h-20 transform -rotate-90">
                     <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
+                      cx="40"
+                      cy="40"
+                      r="35"
                       fill="none"
                       stroke="rgba(255, 255, 255, 0.1)"
-                      strokeWidth="10"
+                      strokeWidth="6"
                     />
                     <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
+                      cx="40"
+                      cy="40"
+                      r="35"
                       fill="none"
-                      stroke={stats.attendancePercentage >= 90 ? '#22c55e' : stats.attendancePercentage >= 75 ? '#f59e0b' : '#ef4444'}
-                      strokeWidth="10"
+                      stroke={stats.attendancePercentage >= 90 ? '#f59e0b' : stats.attendancePercentage >= 75 ? '#f59e0b' : '#ef4444'}
+                      strokeWidth="6"
                       strokeLinecap="round"
-                      strokeDasharray={`${(stats.attendancePercentage / 100) * 352} 352`}
+                      strokeDasharray={`${(stats.attendancePercentage / 100) * 220} 220`}
                       className="transition-all duration-500"
                     />
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-white">{stats.attendancePercentage}%</span>
-                    <span className="text-xs text-teal-200/70">Overall</span>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-lg font-bold text-white">{stats.attendancePercentage}%</span>
                   </div>
                 </div>
-                <p className={`mt-3 text-xs font-medium ${
-                  stats.attendancePercentage >= 90 ? 'text-green-400' :
-                  stats.attendancePercentage >= 75 ? 'text-yellow-400' :
-                  'text-red-400'
-                }`}>
-                  {stats.attendancePercentage >= 90 ? 'Excellent' :
-                   stats.attendancePercentage >= 75 ? 'Good' :
-                   'Needs Improvement'}
-                </p>
-              </FloatingCard>
+              </div>
+            </FloatingCard>
 
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {/* Total Days */}
-              <FloatingCard className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-teal-500/20 flex items-center justify-center mb-3">
-                    <Calendar size={24} className="text-teal-400" />
+              <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar size={20} className="text-teal-300" />
                   </div>
                   <p className="text-3xl font-bold text-white mb-1">{stats.totalDays}</p>
-                  <p className="text-sm text-teal-200">Total Days</p>
-                  <p className="text-xs text-teal-200/60 mt-1">School days tracked</p>
+                  <p className="text-sm text-teal-200/70">Total Days</p>
                 </div>
               </FloatingCard>
 
               {/* Present */}
-              <FloatingCard className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-3">
-                    <CheckCircle size={24} className="text-green-400" />
+              <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle size={20} className="text-green-400" />
                   </div>
                   <p className="text-3xl font-bold text-white mb-1">{stats.daysPresent}</p>
-                  <p className="text-sm text-teal-200">Present</p>
-                  <p className="text-xs text-teal-200/60 mt-1">On-time attendance</p>
+                  <p className="text-sm text-teal-200/70">Present</p>
                 </div>
               </FloatingCard>
 
               {/* Late */}
-              <FloatingCard className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3">
-                    <Clock size={24} className="text-yellow-400" />
+              <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock size={20} className="text-yellow-400" />
                   </div>
                   <p className="text-3xl font-bold text-white mb-1">{stats.daysLate}</p>
-                  <p className="text-sm text-teal-200">Late</p>
-                  <p className="text-xs text-teal-200/60 mt-1">Late arrivals</p>
+                  <p className="text-sm text-teal-200/70">Late</p>
                 </div>
               </FloatingCard>
 
               {/* Absent */}
-              <FloatingCard className="p-6 md:col-start-2 lg:col-start-1">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-3">
-                    <XCircle size={24} className="text-red-400" />
+              <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-3">
+                    <XCircle size={20} className="text-red-400" />
                   </div>
                   <p className="text-3xl font-bold text-white mb-1">{stats.daysAbsent}</p>
-                  <p className="text-sm text-teal-200">Absent</p>
-                  <p className="text-xs text-teal-200/60 mt-1">Missed classes</p>
+                  <p className="text-sm text-teal-200/70">Absent</p>
                 </div>
               </FloatingCard>
             </div>
 
-            {/* Recent Attendance */}
-            <FloatingCard className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Recent Attendance</h3>
-                <span className="text-xs text-teal-200/60">Last 10 records</span>
+            {/* Attendance Status Bar */}
+            <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 bg-teal-400 rounded-full"></div>
+                <h3 className="text-sm font-semibold text-white">Attendance Status</h3>
               </div>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="h-3 bg-teal-900/40 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-full transition-all duration-500"
+                      style={{ width: `${stats.attendancePercentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span className="text-teal-200/70">100% Excellent</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                      <span className="text-teal-200/70">75-89% Needs Improvement</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span className="text-teal-200/70">&lt;75% Critical</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-yellow-400">{stats.attendancePercentage}%</p>
+                </div>
+              </div>
+            </FloatingCard>
+
+            {/* Recent Attendance Records */}
+            <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+              <h3 className="text-base font-semibold text-white mb-4">Recent Attendance Records</h3>
               {studentRecords.length > 0 ? (
                 <div className="space-y-2">
                   {studentRecords.slice(0, 10).map((record, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-teal-900/20 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          record.status === 'PRESENT' ? 'bg-green-500/20' :
-                          record.status === 'LATE_PRESENT' ? 'bg-yellow-500/20' :
-                          'bg-red-500/20'
-                        }`}>
-                          {record.status === 'PRESENT' && <CheckCircle size={18} className="text-green-400" />}
-                          {record.status === 'LATE_PRESENT' && <Clock size={18} className="text-yellow-400" />}
-                          {record.status === 'ABSENT' && <XCircle size={18} className="text-red-400" />}
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-medium">{record.studentName}</p>
-                          <p className="text-teal-200/60 text-xs">{record.date} at {record.time}</p>
-                        </div>
+                    <div key={index} className="flex items-center justify-between py-3 border-b border-teal-700/30 last:border-0">
+                      <div>
+                        <p className="text-white text-sm font-medium">{record.date}</p>
+                        <p className="text-teal-200/60 text-xs">Time: {record.time}</p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        record.status === 'PRESENT' ? 'bg-green-500/20 text-green-400' :
-                        record.status === 'LATE_PRESENT' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-red-500/20 text-red-400'
+                      <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${
+                        record.status === 'PRESENT' ? 'bg-green-500/90 text-white' :
+                        record.status === 'LATE_PRESENT' ? 'bg-yellow-500/90 text-white' :
+                        'bg-red-500/90 text-white'
                       }`}>
                         {record.status === 'PRESENT' ? 'Present' :
                          record.status === 'LATE_PRESENT' ? 'Late' : 'Absent'}
@@ -222,29 +242,15 @@ const StudentDashboard = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <Calendar size={48} className="mx-auto mb-3 text-teal-400/30" />
-                  <p className="text-teal-200/70">No attendance records found</p>
-                  <p className="text-teal-200/50 text-sm mt-1">Attendance data will appear here once recorded</p>
+                <div className="text-center py-8">
+                  <Calendar size={40} className="mx-auto mb-3 text-teal-400/30" />
+                  <p className="text-teal-200/60 text-sm">No attendance records found</p>
                 </div>
               )}
             </FloatingCard>
           </div>
         )}
 
-        {/* No Search Results */}
-        {!searchedStudent && !error && (
-          <FloatingCard className="p-12">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto rounded-full bg-teal-500/20 flex items-center justify-center mb-4">
-                <Search size={32} className="text-teal-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Search for Student</h3>
-              <p className="text-teal-200/80 mb-1">Enter a Student ID to view their attendance statistics</p>
-              <p className="text-teal-200/60 text-sm">Example: 20221CIT0043</p>
-            </div>
-          </FloatingCard>
-        )}
       </main>
 
       <Footer />

@@ -516,51 +516,88 @@ export const getRecordsForExport = (
 ): AttendanceRecord[] => {
   const records = getAttendanceRecords(); // Use real attendance records, not mock
   const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset to start of day for accurate comparison
   
-  let startDate: Date;
+  const todayStr = today.toISOString().split('T')[0];
+  
   switch (filter) {
     case 'daily':
-      startDate = new Date(today);
-      startDate.setDate(today.getDate() - 1);
-      break;
+      // Export only today's records
+      return records.filter(r => r.date === todayStr);
+      
     case 'weekly':
-      startDate = new Date(today);
-      startDate.setDate(today.getDate() - 7);
-      break;
+      // Export records from the past 7 days (current week)
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - 6); // 7 days including today
+      const weekStartStr = weekStart.toISOString().split('T')[0];
+      return records.filter(r => r.date >= weekStartStr && r.date <= todayStr);
+      
     case 'monthly':
-      startDate = new Date(today);
-      startDate.setMonth(today.getMonth() - 1);
-      break;
+      // Export records from current month
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthStartStr = monthStart.toISOString().split('T')[0];
+      return records.filter(r => r.date >= monthStartStr && r.date <= todayStr);
+      
     default:
-      startDate = new Date(today);
-      startDate.setDate(today.getDate() - 1);
+      return records.filter(r => r.date === todayStr);
   }
-  
-  return records.filter(r => new Date(r.date) >= startDate);
 };
 
-// Export to CSV
-export const exportToCSV = (records: AttendanceRecord[]): void => {
-  const headers = ['Student ID', 'Student Name', 'Date', 'Time', 'Status', 'Method'];
-  const csvContent = [
-    headers.join(','),
-    ...records.map(r => [
-      r.studentId,
-      r.studentName,
-      r.date,
-      r.time,
-      r.status,
-      r.method
-    ].join(','))
-  ].join('\n');
-  
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `attendance_export_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  window.URL.revokeObjectURL(url);
+// Export to CSV (excluding Method column as per requirements)
+export const exportToCSV = (records: AttendanceRecord[], filter: 'daily' | 'weekly' | 'monthly' = 'daily'): void => {
+  try {
+    // CSV headers - excluding Method column
+    const headers = ['Student ID', 'Student Name', 'Date', 'Time', 'Status'];
+    
+    // Generate CSV content
+    const csvContent = [
+      headers.join(','),
+      ...records.map(r => [
+        r.studentId || '',
+        r.studentName || '',
+        r.date || '',
+        r.time || '',
+        r.status || ''
+      ].join(','))
+    ].join('\n');
+    
+    // Create blob with UTF-8 encoding
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    
+    // Generate filename based on filter type
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    let filename: string;
+    
+    switch (filter) {
+      case 'daily':
+        filename = `attendance_daily_${dateStr}.csv`;
+        break;
+      case 'weekly':
+        const weekNum = Math.ceil((today.getDate() + 6 - today.getDay()) / 7);
+        filename = `attendance_weekly_${today.getFullYear()}-W${weekNum.toString().padStart(2, '0')}.csv`;
+        break;
+      case 'monthly':
+        filename = `attendance_monthly_${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}.csv`;
+        break;
+      default:
+        filename = `attendance_export_${dateStr}.csv`;
+    }
+    
+    // Trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    console.log(`CSV export successful: ${filename}, ${records.length} records`);
+  } catch (error) {
+    console.error('Error exporting CSV:', error);
+  }
 };
 
 // Get weekly summary for charts (using real data, not random mock data)

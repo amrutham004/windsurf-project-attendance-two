@@ -7,36 +7,38 @@ import {
   getDashboardStats, 
   getAttendanceRecords,
   getRecordsForExport,
-  exportToCSV
+  exportToCSV,
+  getWeeklySummary,
+  getTodayAttendanceStatus
 } from '@/lib/attendanceData';
 import { AttendanceRecord } from '@/types/attendance';
-import { Calendar, CheckCircle, Clock, XCircle, Download } from 'lucide-react';
-import GlassButton from '@/components/3d/GlassButton';
+import { Users, UserCheck, Clock, UserX, Download, BarChart3 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({ totalStudents: 0, presentToday: 0, lateToday: 0, absentToday: 0 });
-  const [recentRecords, setRecentRecords] = useState<AttendanceRecord[]>([]);
-  const [attendanceRate, setAttendanceRate] = useState(0);
-  const [exportFilter, setExportFilter] = useState<'daily' | 'weekly'>('daily');
+  const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
+  const [weeklyData, setWeeklyData] = useState<any[]>([]);
+  const [exportFilter, setExportFilter] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [currentDate, setCurrentDate] = useState('');
 
   useEffect(() => {
     const statsData = getDashboardStats();
     setStats(statsData);
 
-    const records = getAttendanceRecords();
-    const sorted = records.sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
-    setRecentRecords(sorted.slice(0, 10));
+    const today = getTodayAttendanceStatus();
+    setTodayRecords(today);
 
-    // Calculate attendance rate
-    const totalDays = records.length;
-    const presentDays = records.filter(r => r.status === 'PRESENT').length;
-    const rate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
-    setAttendanceRate(rate);
+    const weekly = getWeeklySummary();
+    setWeeklyData(weekly);
+
+    const date = new Date();
+    setCurrentDate(date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
   }, []);
 
   const handleExport = () => {
     const records = getRecordsForExport(exportFilter);
-    exportToCSV(records);
+    exportToCSV(records, exportFilter);
   };
 
   return (
@@ -44,178 +46,214 @@ const AdminDashboard = () => {
       <Scene3D />
       <Header />
 
-      <main className="container relative z-10 py-8 max-w-6xl mx-auto px-4">
+      <main className="container relative z-10 py-8 max-w-7xl mx-auto px-4">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">Admin Dashboard</h1>
+          <p className="text-teal-100/70 text-sm">Overview for {currentDate}</p>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Attendance Rate Card */}
-          <FloatingCard className="flex flex-col items-center justify-center p-6">
-            <h3 className="text-sm font-medium text-white mb-4">Attendance Rate</h3>
-            <div className="relative w-32 h-32">
-              <svg className="w-32 h-32 transform -rotate-90">
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  fill="none"
-                  stroke="rgba(255, 255, 255, 0.1)"
-                  strokeWidth="10"
-                />
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  fill="none"
-                  stroke={attendanceRate >= 90 ? '#22c55e' : attendanceRate >= 75 ? '#f59e0b' : '#ef4444'}
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(attendanceRate / 100) * 352} 352`}
-                  className="transition-all duration-500"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold text-white">{attendanceRate}%</span>
-                <span className="text-xs text-teal-200/70">Overall</span>
+          {/* Total Students */}
+          <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center mb-3">
+                  <Users size={20} className="text-teal-300" />
+                </div>
+                <p className="text-3xl font-bold text-white mb-1">{stats.totalStudents}</p>
+                <p className="text-sm text-teal-200/70">Total Students</p>
               </div>
-            </div>
-            <p className={`mt-3 text-xs font-medium ${
-              attendanceRate >= 90 ? 'text-green-400' :
-              attendanceRate >= 75 ? 'text-yellow-400' :
-              'text-red-400'
-            }`}>
-              {attendanceRate >= 90 ? 'Excellent' :
-               attendanceRate >= 75 ? 'Good' :
-               'Needs Improvement'}
-            </p>
-          </FloatingCard>
-
-          {/* Total Days */}
-          <FloatingCard className="p-6">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-teal-500/20 flex items-center justify-center mb-3">
-                <Calendar size={24} className="text-teal-400" />
-              </div>
-              <p className="text-3xl font-bold text-white mb-1">{stats.totalStudents}</p>
-              <p className="text-sm text-teal-200">Total Days</p>
-              <p className="text-xs text-teal-200/60 mt-1">School days tracked</p>
             </div>
           </FloatingCard>
 
-          {/* Present */}
-          <FloatingCard className="p-6">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-3">
-                <CheckCircle size={24} className="text-green-400" />
+          {/* Present Today */}
+          <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-3">
+                  <UserCheck size={20} className="text-green-400" />
+                </div>
+                <p className="text-3xl font-bold text-white mb-1">{stats.presentToday}</p>
+                <p className="text-sm text-teal-200/70">Present Today</p>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">{stats.presentToday}</p>
-              <p className="text-sm text-teal-200">Present</p>
-              <p className="text-xs text-teal-200/60 mt-1">On-time attendance</p>
             </div>
           </FloatingCard>
 
-          {/* Late */}
-          <FloatingCard className="p-6">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3">
-                <Clock size={24} className="text-yellow-400" />
+          {/* Late Today */}
+          <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center mb-3">
+                  <Clock size={20} className="text-yellow-400" />
+                </div>
+                <p className="text-3xl font-bold text-white mb-1">{stats.lateToday}</p>
+                <p className="text-sm text-teal-200/70">Late Today</p>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">{stats.lateToday}</p>
-              <p className="text-sm text-teal-200">Late</p>
-              <p className="text-xs text-teal-200/60 mt-1">Late arrivals</p>
             </div>
           </FloatingCard>
 
-          {/* Absent */}
-          <FloatingCard className="p-6 md:col-start-2 lg:col-start-1">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-3">
-                <XCircle size={24} className="text-red-400" />
+          {/* Absent Today */}
+          <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center mb-3">
+                  <UserX size={20} className="text-red-400" />
+                </div>
+                <p className="text-3xl font-bold text-white mb-1">{stats.absentToday}</p>
+                <p className="text-sm text-teal-200/70">Absent Today</p>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">{stats.absentToday}</p>
-              <p className="text-sm text-teal-200">Absent</p>
-              <p className="text-xs text-teal-200/60 mt-1">Missed classes</p>
             </div>
           </FloatingCard>
         </div>
 
-        {/* Recent Attendance */}
-        <FloatingCard className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Recent Attendance</h3>
-            <span className="text-xs text-teal-200/60">Last 10 records</span>
-          </div>
-          {recentRecords.length > 0 ? (
-            <div className="space-y-2">
-              {recentRecords.map((record, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-teal-900/20 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      record.status === 'PRESENT' ? 'bg-green-500/20' :
-                      record.status === 'LATE_PRESENT' ? 'bg-yellow-500/20' :
-                      'bg-red-500/20'
-                    }`}>
-                      {record.status === 'PRESENT' && <CheckCircle size={18} className="text-green-400" />}
-                      {record.status === 'LATE_PRESENT' && <Clock size={18} className="text-yellow-400" />}
-                      {record.status === 'ABSENT' && <XCircle size={18} className="text-red-400" />}
-                    </div>
-                    <div>
-                      <p className="text-white text-sm font-medium">{record.studentName}</p>
-                      <p className="text-teal-200/60 text-xs">{record.date} at {record.time}</p>
-                    </div>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    record.status === 'PRESENT' ? 'bg-green-500/20 text-green-400' :
-                    record.status === 'LATE_PRESENT' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {record.status === 'PRESENT' ? 'Present' :
-                     record.status === 'LATE_PRESENT' ? 'Late' : 'Absent'}
-                  </span>
-                </div>
-              ))}
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Weekly Attendance Summary Chart */}
+          <FloatingCard className="lg:col-span-2 p-6 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 size={20} className="text-teal-300" />
+              <h3 className="text-base font-semibold text-white">Weekly Attendance Summary</h3>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <Calendar size={48} className="mx-auto mb-3 text-teal-400/30" />
-              <p className="text-teal-200/70">No attendance records found</p>
-              <p className="text-teal-200/50 text-sm mt-1">Attendance data will appear here once recorded</p>
-            </div>
-          )}
-        </FloatingCard>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#94a3b8" 
+                  tick={{ fill: '#94a3b8', fontSize: 12 }}
+                />
+                <YAxis 
+                  stroke="#94a3b8" 
+                  tick={{ fill: '#94a3b8', fontSize: 12 }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '12px',
+                    padding: '8px 12px'
+                  }}
+                  labelStyle={{ color: '#fff', fontWeight: 'bold' }}
+                  itemStyle={{ color: '#fff', fontSize: '12px' }}
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '10px' }}
+                  iconType="circle"
+                />
+                <Bar dataKey="present" fill="#22c55e" name="Present" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="late" fill="#f59e0b" name="Late" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="absent" fill="#ef4444" name="Absent" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </FloatingCard>
 
-        {/* Export Section */}
-        <FloatingCard className="p-6 mt-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Export Attendance Data</h3>
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setExportFilter('daily')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  exportFilter === 'daily'
-                    ? 'bg-teal-500 text-white'
-                    : 'bg-teal-900/30 text-teal-200 hover:bg-teal-900/50'
-                }`}
-              >
-                Daily
-              </button>
-              <button
-                onClick={() => setExportFilter('weekly')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  exportFilter === 'weekly'
-                    ? 'bg-teal-500 text-white'
-                    : 'bg-teal-900/30 text-teal-200 hover:bg-teal-900/50'
-                }`}
-              >
-                Weekly
-              </button>
+          {/* Export Reports Card */}
+          <FloatingCard className="p-6 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+            <div className="flex items-center gap-2 mb-4">
+              <Download size={20} className="text-teal-300" />
+              <h3 className="text-base font-semibold text-white">Export Reports</h3>
             </div>
-            <GlassButton onClick={handleExport} className="px-6 py-2">
-              <Download size={18} className="mr-2" />
-              Download {exportFilter === 'daily' ? 'Daily' : 'Weekly'} Report
-            </GlassButton>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setExportFilter('daily')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    exportFilter === 'daily'
+                      ? 'bg-teal-500 text-white shadow-lg'
+                      : 'bg-teal-900/30 text-teal-200 hover:bg-teal-900/50'
+                  }`}
+                >
+                  Daily
+                </button>
+                <button
+                  onClick={() => setExportFilter('weekly')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    exportFilter === 'weekly'
+                      ? 'bg-teal-500 text-white shadow-lg'
+                      : 'bg-teal-900/30 text-teal-200 hover:bg-teal-900/50'
+                  }`}
+                >
+                  Weekly
+                </button>
+                <button
+                  onClick={() => setExportFilter('monthly')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    exportFilter === 'monthly'
+                      ? 'bg-teal-500 text-white shadow-lg'
+                      : 'bg-teal-900/30 text-teal-200 hover:bg-teal-900/50'
+                  }`}
+                >
+                  Monthly
+                </button>
+              </div>
+              <button
+                onClick={handleExport}
+                className="w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              >
+                <Download size={18} />
+                Download CSV
+              </button>
+              <p className="text-teal-200/60 text-xs text-center">
+                Export {exportFilter} attendance data
+              </p>
+            </div>
+          </FloatingCard>
+        </div>
+
+        {/* Today's Attendance Table */}
+        <FloatingCard className="p-6 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
+          <h3 className="text-base font-semibold text-white mb-4">Today's Attendance</h3>
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="All (3)"
+              className="px-4 py-2 bg-teal-900/30 border border-teal-700/30 rounded-lg text-white placeholder-teal-300/50 text-sm w-48 focus:outline-none focus:border-teal-500"
+              readOnly
+            />
           </div>
-          <p className="text-teal-200/60 text-sm mt-3">
-            Export attendance records as CSV file for {exportFilter === 'daily' ? 'today' : 'the past 7 days'}
-          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-teal-700/30">
+                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Student ID</th>
+                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Name</th>
+                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Grade</th>
+                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Time</th>
+                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {todayRecords.length > 0 ? (
+                  todayRecords.map((record, index) => (
+                    <tr key={index} className="border-b border-teal-700/20 hover:bg-teal-900/20 transition-colors">
+                      <td className="p-3 text-white font-medium">{record.studentId}</td>
+                      <td className="p-3 text-white">{record.studentName}</td>
+                      <td className="p-3 text-teal-200/70">CIT 2022</td>
+                      <td className="p-3 text-teal-200/70">{record.time || '-'}</td>
+                      <td className="p-3">
+                        <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${
+                          record.status === 'PRESENT' ? 'bg-green-500/90 text-white' :
+                          record.status === 'LATE_PRESENT' ? 'bg-yellow-500/90 text-white' :
+                          'bg-red-500/90 text-white'
+                        }`}>
+                          {record.status === 'PRESENT' ? 'Present' :
+                           record.status === 'LATE_PRESENT' ? 'Late' : 'Absent'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-teal-200/60">
+                      No attendance records for today
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </FloatingCard>
       </main>
 
