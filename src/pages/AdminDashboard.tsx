@@ -9,7 +9,8 @@ import {
   getRecordsForExport,
   exportToCSV,
   getWeeklySummary,
-  getTodayAttendanceStatus
+  getTodayAttendanceStatus,
+  testCSVExport
 } from '@/lib/attendanceData';
 import { AttendanceRecord } from '@/types/attendance';
 import { Users, UserCheck, Clock, UserX, Download, BarChart3 } from 'lucide-react';
@@ -34,6 +35,9 @@ const AdminDashboard = () => {
 
     const date = new Date();
     setCurrentDate(date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+    
+    // Expose test function globally for debugging
+    (window as any).testCSVExport = testCSVExport;
   }, []);
 
   const handleExport = () => {
