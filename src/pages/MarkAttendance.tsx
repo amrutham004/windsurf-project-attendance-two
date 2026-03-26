@@ -11,7 +11,7 @@
  * - Side-by-side attendance options
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Header from '@/components/attendance/Header';
 import Footer from '@/components/attendance/Footer';
 import Scene3D from '@/components/3d/Scene3D';
@@ -26,7 +26,7 @@ import {
   getStudentById, 
   QR_VALIDITY_SECONDS 
 } from '@/lib/attendanceData';
-import { getStudentAttendance } from '@/lib/api';
+import { getStudentAttendance, getRecentAttendanceEvents } from '@/lib/api';
 import { ArrowLeft, CheckCircle, Clock, Shield, QrCode, Smartphone, ScanFace, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -50,10 +50,14 @@ const MarkAttendance = () => {
     setTimeRemaining(QR_VALIDITY_SECONDS);
   }, [studentId]);
 
+  // Track when QR display started (for polling new events)
+  const qrDisplayStartTime = useRef<string>('');
+
   // Generate QR code once when step changes
   useEffect(() => {
     if (step !== 'qr-display') return;
     generateNewQR();
+    qrDisplayStartTime.current = new Date().toISOString();
 
     const countdownInterval = setInterval(() => {
       setTimeRemaining(prev => (prev <= 1 ? 0 : prev - 1));
@@ -61,6 +65,30 @@ const MarkAttendance = () => {
 
     return () => clearInterval(countdownInterval);
   }, [step, generateNewQR]);
+
+  // Poll backend to detect when phone marks attendance (cross-device sync)
+  useEffect(() => {
+    if (step !== 'qr-display' && step !== 'qr-verified' && step !== 'face-capture') return;
+    const currentStudentId = studentId.toUpperCase();
+    if (!currentStudentId) return;
+
+    const pollForAttendance = async () => {
+      try {
+        const result = await getRecentAttendanceEvents(qrDisplayStartTime.current || undefined);
+        const match = result.events.find(e => e.studentId === currentStudentId);
+        if (match) {
+          // Phone has marked attendance — show success on laptop!
+          setStudentName(match.studentName);
+          setStep('success');
+        }
+      } catch (err) {
+        // Silent fail
+      }
+    };
+
+    const interval = setInterval(pollForAttendance, 3000);
+    return () => clearInterval(interval);
+  }, [step, studentId]);
 
   // Auto-redirect countdown after QR verification
   useEffect(() => {
@@ -345,21 +373,36 @@ const MarkAttendance = () => {
 
         {/* Step: Success (Face Recognition) */}
         {step === 'success' && (
-          <div className="animate-scale-in max-w-lg mx-auto">
+          <div className="animate-scale-in max-w-lg mx-auto space-y-4">
             <FloatingCard glowColor="rgba(34, 197, 94, 0.3)">
               <div className="text-center space-y-4">
                 <div className="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
                   <CheckCircle size={40} className="text-green-400" />
                 </div>
-                <h2 className="text-xl font-bold font-display text-green-400">Attendance Marked!</h2>
+                <h2 className="text-xl font-bold font-display text-green-400">Attendance Marked Successfully!</h2>
                 <p className="text-teal-100/70">
-                  Your attendance has been successfully recorded for <strong className="text-white">{studentName}</strong>.
+                  Attendance has been recorded for <strong className="text-white">{studentName}</strong> ({studentId.toUpperCase()}).
                 </p>
+
+                {/* Sync confirmation */}
+                <div className="bg-emerald-500/10 border border-emerald-400/20 rounded-xl p-4 text-sm space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-300">
+                    <CheckCircle size={16} />
+                    <span className="font-medium">Synced to all dashboards</span>
+                  </div>
+                  <p className="text-teal-200/60 text-xs">
+                    Admin Dashboard and Student Dashboard will show this record automatically.
+                  </p>
+                </div>
               </div>
 
-              <div className="mt-8 space-y-3">
+              <div className="mt-6 space-y-3">
                 <GlassButton to="/student" variant="primary" className="w-full">
-                  View My Attendance
+                  <User size={16} className="mr-2" />
+                  View Student Dashboard
+                </GlassButton>
+                <GlassButton to="/admin" variant="secondary" className="w-full">
+                  View Admin Dashboard
                 </GlassButton>
                 <button 
                   onClick={handleReset}

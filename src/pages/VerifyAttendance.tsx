@@ -15,7 +15,7 @@ import Header from '@/components/attendance/Header';
 import Footer from '@/components/attendance/Footer';
 import Scene3D from '@/components/3d/Scene3D';
 import FloatingCard from '@/components/3d/FloatingCard';
-import { validateStudentQR, markAttendanceFromScan } from '@/lib/attendanceData';
+import { validateStudentQR, getStudentById } from '@/lib/attendanceData';
 import { CheckCircle, XCircle, Clock, AlertCircle, Camera, Loader2 } from 'lucide-react';
 
 type Step = 'validating' | 'success' | 'error';
@@ -44,17 +44,17 @@ const VerifyAttendance = () => {
     const result = validateStudentQR(qrData);
     
     if (result.valid && result.studentId) {
-      // Mark attendance using the regular function
-      const markResult = markAttendanceFromScan(result.studentId);
+      // Look up student info
+      const student = getStudentById(result.studentId);
       
-      if (markResult.success) {
+      if (student) {
         setStep('success');
-        setMessage(markResult.message);
-        setStudentName(markResult.studentName || '');
+        setMessage('QR code verified. Proceeding to face verification...');
+        setStudentName(student.name);
         setStudentId(result.studentId);
       } else {
         setStep('error');
-        setMessage(markResult.message);
+        setMessage('Student not found in the system.');
         setErrorType('invalid');
       }
     } else {

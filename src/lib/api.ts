@@ -360,6 +360,47 @@ export async function getWeeklySummary(): Promise<Array<{
 /**
  * Export attendance records to CSV
  */
+/**
+ * Get recent attendance events for cross-device sync notifications
+ * Pass 'since' timestamp to only get new events
+ */
+export interface AttendanceEvent {
+  id: string;
+  studentId: string;
+  studentName: string;
+  time: string;
+  date: string;
+  timestamp: string;
+  method: string;
+}
+
+export async function getRecentAttendanceEvents(since?: string): Promise<{
+  events: AttendanceEvent[];
+  serverTime: string;
+}> {
+  try {
+    const params = new URLSearchParams();
+    if (since) params.append('since', since);
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/attendance/recent-events?${params.toString()}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch recent events');
+    }
+
+    const data = await response.json();
+    return {
+      events: data.events || [],
+      serverTime: data.serverTime || new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Error fetching recent events:', error);
+    return { events: [], serverTime: new Date().toISOString() };
+  }
+}
+
 export function exportRecordsToCSV(
   records: AttendanceRecord[],
   filter: 'daily' | 'weekly' | 'monthly'

@@ -119,6 +119,10 @@ app.add_middleware(
         "https://172.17.50.249:8080",
         "http://172.20.10.4:8080",
         "https://172.20.10.4:8080",
+        "http://localhost:8081",
+        "https://localhost:8081",
+        "http://172.20.10.4:8081",
+        "https://172.20.10.4:8081",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -144,6 +148,11 @@ STUDENTS_FOLDER.mkdir(parents=True, exist_ok=True)
 opencv_recognizer = None
 if OPENCV_FACE_RECOGNITION_AVAILABLE:
     opencv_recognizer = OpenCVFaceRecognizer(ENCODINGS_FILE, STUDENTS_FOLDER)
+
+# In-memory tracker for recent attendance events (for cross-device sync notifications)
+# Stores last 20 events, each with timestamp, student info
+recent_attendance_events = []
+MAX_RECENT_EVENTS = 20
 
 # Timezone standardization - Use IST (Asia/Kolkata) for all date/time operations
 IST = pytz.timezone('Asia/Kolkata')
@@ -1071,6 +1080,20 @@ async def mark_attendance_simple(request: Request, data: FaceVerificationRequest
         
         log_event("ATTENDANCE_MARKED", f"Attendance marked for {data.studentId} via /mark-attendance", student_id=data.studentId)
         
+        # Push to recent events for cross-device sync notifications
+        event = {
+            "id": str(uuid.uuid4()),
+            "studentId": data.studentId,
+            "studentName": student[0],
+            "time": attendance_time,
+            "date": attendance_date,
+            "timestamp": datetime.now(IST).isoformat(),
+            "method": method
+        }
+        recent_attendance_events.insert(0, event)
+        if len(recent_attendance_events) > MAX_RECENT_EVENTS:
+            recent_attendance_events.pop()
+        
         return {
             "success": True,
             "verified": True,
@@ -1424,6 +1447,25 @@ async def get_today_stats():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/attendance/recent-events")
+async def get_recent_attendance_events(since: Optional[str] = Query(None)):
+    """Get recent attendance events for cross-device sync notifications.
+    Pass 'since' as an ISO timestamp to only get events after that time."""
+    try:
+        if since:
+            filtered = [e for e in recent_attendance_events if e["timestamp"] > since]
+        else:
+            filtered = recent_attendance_events[:5]
+        
+        return {
+            "success": True,
+            "events": filtered,
+            "count": len(filtered),
+            "serverTime": datetime.now(IST).isoformat()
+        }
+    except Exception as e:
+        return {"success": False, "events": [], "count": 0, "serverTime": datetime.now(IST).isoformat()}
 
 @app.get("/api/attendance/today-list")
 async def get_today_attendance_list():

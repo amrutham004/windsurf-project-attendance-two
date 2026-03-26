@@ -30,7 +30,8 @@ import FloatingCard from '@/components/3d/FloatingCard';
 
 import GlassButton from '@/components/3d/GlassButton';
 
-import { getStudentById, hasMarkedAttendanceToday, saveFaceCapture, getFaceCapture, verifyFaceWithBackend } from '@/lib/attendanceData';
+import { getStudentById, saveFaceCapture, getFaceCapture } from '@/lib/attendanceData';
+import { markAttendance, getStudentAttendance } from '@/lib/api';
 
 import { Camera, X, RotateCcw, Check, AlertCircle, CheckCircle, User } from 'lucide-react';
 
@@ -102,45 +103,31 @@ const StudentFaceCapture = () => {
 
     setStudentName(student.name);
 
-
-
-    // Check if attendance was marked today
-
-    if (!hasMarkedAttendanceToday(rollNo)) {
-
-      setError('Attendance not marked for today. Please scan the QR code first.');
-
-      setStep('error');
-
-      return;
-
-    }
-
-
-
-    // Check if face already captured
-
+    // Check if face already captured locally today
     const today = new Date().toISOString().split('T')[0];
-
     const existingCapture = getFaceCapture(rollNo, today);
-
     if (existingCapture) {
-
       setStep('success');
-
       setCapturedImage(existingCapture);
-
       return;
-
     }
 
-
-
-    // Start camera
-
-    setStep('capture');
-
-    startCamera();
+    // Check if attendance already marked today on backend
+    const checkBackend = async () => {
+      try {
+        const records = await getStudentAttendance(rollNo, today, today);
+        if (records && records.length > 0) {
+          setStep('success');
+          return;
+        }
+      } catch (err) {
+        // If check fails, proceed to capture anyway
+      }
+      // Start camera for face capture
+      setStep('capture');
+      startCamera();
+    };
+    checkBackend();
 
   }, [rollNo]);
 
@@ -274,17 +261,17 @@ const StudentFaceCapture = () => {
     setError('');
 
     try {
-      // Verify face with backend
-      const result = await verifyFaceWithBackend(student.id, student.name, capturedImage);
+      // Call real backend API to verify face and mark attendance
+      const result = await markAttendance(student.id, student.name, capturedImage);
       
-      if (result.success) {
+      if (result.success && result.verified) {
         // Save face capture locally
         const today = new Date().toISOString().split('T')[0];
         saveFaceCapture(rollNo, today, capturedImage);
         
         setStep('success');
       } else {
-        setError(result.message);
+        setError(result.message || 'Face verification failed.');
         setStep('error');
       }
     } catch (error) {

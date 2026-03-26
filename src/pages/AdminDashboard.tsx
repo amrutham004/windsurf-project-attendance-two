@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Header from '@/components/attendance/Header';
 import Footer from '@/components/attendance/Footer';
 import Scene3D from '@/components/3d/Scene3D';
@@ -8,10 +8,12 @@ import {
   getTodayAttendanceList,
   getAllAttendanceRecords,
   getWeeklySummary,
-  exportRecordsToCSV
+  exportRecordsToCSV,
+  getRecentAttendanceEvents,
+  AttendanceEvent
 } from '@/lib/api';
 import { AttendanceRecord } from '@/types/attendance';
-import { Users, UserCheck, Clock, UserX, Download, BarChart3, RefreshCw } from 'lucide-react';
+import { Users, UserCheck, Clock, UserX, Download, BarChart3, RefreshCw, CheckCircle2, X, Smartphone } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = () => {
@@ -22,6 +24,14 @@ const AdminDashboard = () => {
   const [currentDate, setCurrentDate] = useState('');
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [notifications, setNotifications] = useState<AttendanceEvent[]>([]);
+  const lastEventTimestamp = useRef<string>('');
+  const seenEventIds = useRef<Set<string>>(new Set());
+
+  // Dismiss a notification
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
 
   const fetchData = useCallback(async (isManual = false) => {
     try {
@@ -49,12 +59,57 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  // Initial data load + periodic refresh every 10 seconds
   useEffect(() => {
     fetchData();
-    
-    // Refresh data every 10 seconds for real-time updates
     const interval = setInterval(() => fetchData(), 10000);
     return () => clearInterval(interval);
+  }, [fetchData]);
+
+  // Auto-dismiss notifications after 8 seconds
+  useEffect(() => {
+    if (notifications.length === 0) return;
+    const timer = setTimeout(() => {
+      setNotifications(prev => prev.slice(1));
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [notifications]);
+
+  // Poll for new attendance events every 5 seconds (lightweight endpoint)
+  // Shows toast notification on laptop when attendance is marked from phone
+  useEffect(() => {
+    const pollEvents = async () => {
+      try {
+        const since = lastEventTimestamp.current || undefined;
+        const result = await getRecentAttendanceEvents(since);
+        
+        if (result.events.length > 0) {
+          const newEvents = result.events.filter(e => !seenEventIds.current.has(e.id));
+          
+          if (newEvents.length > 0) {
+            newEvents.forEach(e => seenEventIds.current.add(e.id));
+            lastEventTimestamp.current = result.events[0].timestamp;
+            setNotifications(prev => [...newEvents, ...prev].slice(0, 5));
+            // Refresh dashboard data immediately when new attendance detected
+            fetchData();
+          }
+        }
+        
+        if (!lastEventTimestamp.current && result.serverTime) {
+          lastEventTimestamp.current = result.serverTime;
+        }
+      } catch (err) {
+        // Silent fail - don't break the dashboard
+      }
+    };
+
+    const initialTimeout = setTimeout(pollEvents, 2000);
+    const interval = setInterval(pollEvents, 5000);
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
   }, [fetchData]);
 
   const handleExport = async () => {
@@ -91,6 +146,39 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-teal-800 to-emerald-900 text-white overflow-hidden">
+      {/* Cross-device attendance notification toasts */}
+      <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 max-w-sm">
+        {notifications.map((event) => (
+          <div
+            key={event.id}
+            className="bg-emerald-600/95 backdrop-blur-md border border-emerald-400/40 rounded-xl p-4 shadow-2xl animate-[slideIn_0.3s_ease-out] flex items-start gap-3"
+            style={{ animation: 'slideIn 0.3s ease-out' }}
+          >
+            <div className="w-10 h-10 rounded-full bg-emerald-400/30 flex items-center justify-center flex-shrink-0">
+              <Smartphone size={20} className="text-emerald-100" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <CheckCircle2 size={14} className="text-emerald-200" />
+                <span className="text-sm font-semibold text-white">Attendance Confirmed</span>
+              </div>
+              <p className="text-emerald-100 text-sm">
+                <span className="font-bold">{event.studentName}</span> ({event.studentId})
+              </p>
+              <p className="text-emerald-200/70 text-xs mt-0.5">
+                Marked at {event.time} via mobile device
+              </p>
+            </div>
+            <button
+              onClick={() => dismissNotification(event.id)}
+              className="text-emerald-200/60 hover:text-white transition-colors flex-shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+
       <Scene3D />
       <Header />
 
