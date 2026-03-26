@@ -294,8 +294,8 @@ function determineStatus(checkInTime: string): AttendanceStatus {
   const [hours, minutes] = checkInTime.split(':').map(Number);
   const timeInMinutes = hours * 60 + minutes;
   
-  // Cutoff time: 9:30 AM = 570 minutes
-  const cutoffTime = 9 * 60 + 30;
+  // Cutoff time: 1:00 PM = 780 minutes
+  const cutoffTime = 13 * 60;
   
   if (timeInMinutes <= cutoffTime) {
     return 'PRESENT';

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Header from '@/components/attendance/Header';
 import Footer from '@/components/attendance/Footer';
 import Scene3D from '@/components/3d/Scene3D';
@@ -11,7 +11,7 @@ import {
   exportRecordsToCSV
 } from '@/lib/api';
 import { AttendanceRecord } from '@/types/attendance';
-import { Users, UserCheck, Clock, UserX, Download, BarChart3 } from 'lucide-react';
+import { Users, UserCheck, Clock, UserX, Download, BarChart3, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = () => {
@@ -20,35 +20,42 @@ const AdminDashboard = () => {
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [exportFilter, setExportFilter] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [currentDate, setCurrentDate] = useState('');
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchData = useCallback(async (isManual = false) => {
+    try {
+      if (isManual) setIsRefreshing(true);
+
+      // Fetch today's stats from backend
+      const statsData = await getTodayStats();
+      setStats(statsData);
+
+      // Fetch today's attendance list from backend
+      const today = await getTodayAttendanceList();
+      setTodayRecords(today);
+
+      // Fetch weekly summary from backend
+      const weekly = await getWeeklySummary();
+      setWeeklyData(weekly);
+
+      const date = new Date();
+      setCurrentDate(date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+      setLastSynced(new Date());
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      if (isManual) setIsRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch today's stats from backend
-        const statsData = await getTodayStats();
-        setStats(statsData);
-
-        // Fetch today's attendance list from backend
-        const today = await getTodayAttendanceList();
-        setTodayRecords(today);
-
-        // Fetch weekly summary from backend
-        const weekly = await getWeeklySummary();
-        setWeeklyData(weekly);
-
-        const date = new Date();
-        setCurrentDate(date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      }
-    };
-
     fetchData();
     
     // Refresh data every 10 seconds for real-time updates
-    const interval = setInterval(fetchData, 10000);
+    const interval = setInterval(() => fetchData(), 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
 
   const handleExport = async () => {
     try {
@@ -89,9 +96,25 @@ const AdminDashboard = () => {
 
       <main className="container relative z-10 py-8 max-w-7xl mx-auto px-4">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Admin Dashboard</h1>
-          <p className="text-teal-100/70 text-sm">Overview for {currentDate}</p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">Admin Dashboard</h1>
+            <p className="text-teal-100/70 text-sm">Overview for {currentDate}</p>
+            {lastSynced && (
+              <p className="text-teal-300/50 text-xs mt-1 flex items-center gap-1">
+                <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
+                Last synced: {lastSynced.toLocaleTimeString()} • Auto-refreshing every 10s
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => fetchData(true)}
+            disabled={isRefreshing}
+            className="px-4 py-2 bg-teal-700/40 hover:bg-teal-600/50 border border-teal-500/30 rounded-xl text-sm text-teal-200 transition-all flex items-center gap-2 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            {isRefreshing ? 'Syncing...' : 'Refresh'}
+          </button>
         </div>
 
         {/* Stats Grid */}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Header from '@/components/attendance/Header';
 import Footer from '@/components/attendance/Footer';
 import Scene3D from '@/components/3d/Scene3D';
@@ -9,7 +9,7 @@ import {
 } from '@/lib/api';
 import { getStudentById } from '@/lib/attendanceData';
 import { StudentStats, Student, AttendanceRecord } from '@/types/attendance';
-import { User, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { User, Calendar, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
 const StudentDashboard = () => {
   const [studentId, setStudentId] = useState('');
@@ -17,7 +17,62 @@ const StudentDashboard = () => {
   const [stats, setStats] = useState<StudentStats | null>(null);
   const [studentRecords, setStudentRecords] = useState<AttendanceRecord[]>([]);
   const [error, setError] = useState('');
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const activeStudentRef = useRef<Student | null>(null);
 
+  // Fetch attendance data for a student (reusable for polling)
+  const fetchStudentData = useCallback(async (student: Student, isManualRefresh = false) => {
+    try {
+      if (isManualRefresh) setIsRefreshing(true);
+      
+      const records = await getStudentAttendance(student.id);
+      
+      const totalDays = records.length;
+      const presentDays = records.filter(r => r.status === 'PRESENT').length;
+      const lateDays = records.filter(r => r.status === 'LATE_PRESENT').length;
+      const absentDays = records.filter(r => r.status === 'ABSENT').length;
+      const attendancePercentage = totalDays > 0 
+        ? Math.round(((presentDays + lateDays) / totalDays) * 100) 
+        : 0;
+      
+      setStats({
+        totalDays,
+        daysPresent: presentDays,
+        daysLate: lateDays,
+        daysAbsent: absentDays,
+        attendancePercentage
+      });
+      
+      const filteredRecords = records
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 30);
+      setStudentRecords(filteredRecords);
+      setLastSynced(new Date());
+    } catch (err) {
+      console.error('Error fetching student attendance:', err);
+      if (isManualRefresh) {
+        // Don't clear existing data on background refresh failure
+      } else {
+        setError('Failed to fetch attendance data. Please try again.');
+      }
+    } finally {
+      if (isManualRefresh) setIsRefreshing(false);
+    }
+  }, []);
+
+  // Auto-refresh every 15 seconds when a student is being viewed
+  useEffect(() => {
+    if (!activeStudentRef.current) return;
+    
+    const interval = setInterval(() => {
+      if (activeStudentRef.current) {
+        fetchStudentData(activeStudentRef.current);
+      }
+    }, 15000);
+    
+    return () => clearInterval(interval);
+  }, [fetchStudentData, searchedStudent]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,45 +82,15 @@ const StudentDashboard = () => {
     if (!student) {
       setError('Student ID not found. Please check and try again.');
       setSearchedStudent(null);
+      activeStudentRef.current = null;
       setStats(null);
       setStudentRecords([]);
       return;
     }
 
     setSearchedStudent(student);
-    
-    try {
-      // Fetch attendance records from backend API
-      const records = await getStudentAttendance(student.id);
-      
-      // Calculate stats from records
-      const totalDays = records.length;
-      const presentDays = records.filter(r => r.status === 'PRESENT').length;
-      const lateDays = records.filter(r => r.status === 'LATE_PRESENT').length;
-      const absentDays = records.filter(r => r.status === 'ABSENT').length;
-      const attendancePercentage = totalDays > 0 
-        ? Math.round(((presentDays + lateDays) / totalDays) * 100) 
-        : 0;
-      
-      const studentStats: StudentStats = {
-        totalDays,
-        daysPresent: presentDays,
-        daysLate: lateDays,
-        daysAbsent: absentDays,
-        attendancePercentage
-      };
-      
-      setStats(studentStats);
-      
-      // Show last 30 days of attendance records
-      const filteredRecords = records
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 30);
-      setStudentRecords(filteredRecords);
-    } catch (error) {
-      console.error('Error fetching student attendance:', error);
-      setError('Failed to fetch attendance data. Please try again.');
-    }
+    activeStudentRef.current = student;
+    await fetchStudentData(student);
   };
 
   return (
@@ -128,6 +153,12 @@ const StudentDashboard = () => {
                   <div>
                     <h2 className="text-xl font-bold text-white">{searchedStudent.name}</h2>
                     <p className="text-teal-200/70 text-sm">ID: {searchedStudent.id} • Grade: {searchedStudent.grade}</p>
+                    {lastSynced && (
+                      <p className="text-teal-300/50 text-xs mt-1 flex items-center gap-1">
+                        <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
+                        Last synced: {lastSynced.toLocaleTimeString()} • Auto-refreshing every 15s
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="relative w-20 h-20">
@@ -156,6 +187,14 @@ const StudentDashboard = () => {
                     <span className="text-lg font-bold text-white">{stats.attendancePercentage}%</span>
                   </div>
                 </div>
+                <button
+                  onClick={() => activeStudentRef.current && fetchStudentData(activeStudentRef.current, true)}
+                  disabled={isRefreshing}
+                  className="ml-3 p-2 bg-teal-700/40 hover:bg-teal-600/50 border border-teal-500/30 rounded-xl text-teal-200 transition-all disabled:opacity-50"
+                  title="Refresh data"
+                >
+                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                </button>
               </div>
             </FloatingCard>
 
