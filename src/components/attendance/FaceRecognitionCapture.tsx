@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Camera, X, RotateCcw, Check, Loader2 } from 'lucide-react';
 import FloatingCard from '@/components/3d/FloatingCard';
 import GlassButton from '@/components/3d/GlassButton';
+import { markAttendance } from '@/lib/api';
 
 interface FaceRecognitionCaptureProps {
   studentId: string;
@@ -99,31 +100,37 @@ const FaceRecognitionCapture = ({
     setIsVerifying(true);
     setVerificationResult(null);
 
-    // Simulate face verification API call
-    // In production, this would send the image to a face recognition backend
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Call backend API for face verification and attendance marking
+      const result = await markAttendance(studentId, studentName, capturedImage);
 
-    // Simulate 90% success rate for demo purposes
-    const isMatch = Math.random() > 0.1;
-    
-    if (isMatch) {
-      setVerificationResult('success');
-      // Wait a moment to show success, then trigger callback
-      setTimeout(() => {
-        onSuccess();
-      }, 1500);
-    } else {
+      if (result.success && result.verified) {
+        setVerificationResult('success');
+        // Wait a moment to show success, then trigger callback
+        setTimeout(() => {
+          onSuccess();
+        }, 1500);
+      } else {
+        setVerificationResult('failed');
+        // Call onError if provided
+        if (onError) {
+          setTimeout(() => {
+            onError(result.message || 'Face verification failed. No matching face photo found for your student ID.');
+          }, 1500);
+        }
+      }
+    } catch (error) {
+      console.error('Face verification error:', error);
       setVerificationResult('failed');
-      // Call onError if provided
       if (onError) {
         setTimeout(() => {
-          onError('Face verification failed. No matching face photo found for your student ID.');
+          onError('Failed to verify face. Please try again.');
         }, 1500);
       }
+    } finally {
+      setIsVerifying(false);
     }
-    
-    setIsVerifying(false);
-  }, [capturedImage, onSuccess, onError]);
+  }, [capturedImage, studentId, studentName, onSuccess, onError]);
 
   useEffect(() => {
     startCamera();

@@ -43,8 +43,8 @@ def sanitize_input(input_data: str) -> str:
     return clean_data.strip()
 
 def validate_student_id(student_id: str) -> bool:
-    """Validate student ID format"""
-    pattern = r'^\d{4}CIT\d{4}$'
+    """Validate student ID format (e.g., 20221CIT0043)"""
+    pattern = r'^\d{4,5}CIT\d{4}$'
     return bool(re.match(pattern, student_id))
 
 def validate_email(email: str) -> bool:
@@ -86,10 +86,13 @@ class InputValidator:
         if not image_data or not isinstance(image_data, str):
             return False
         
-        # Check if base64
+        # Check if base64 (strip data URL prefix if present)
         try:
             import base64
-            base64.b64decode(image_data)
+            raw_data = image_data
+            if ',' in raw_data:
+                raw_data = raw_data.split(',')[1]
+            base64.b64decode(raw_data)
             return True
         except:
             return False

@@ -24,10 +24,9 @@ import { Progress } from '@/components/ui/progress';
 import { 
   generateAttendanceURL, 
   getStudentById, 
-  hasMarkedAttendanceToday,
-  markAttendanceFromScan,
   QR_VALIDITY_SECONDS 
 } from '@/lib/attendanceData';
+import { getStudentAttendance } from '@/lib/api';
 import { ArrowLeft, CheckCircle, Clock, Shield, QrCode, Smartphone, ScanFace, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -88,7 +87,7 @@ const MarkAttendance = () => {
     setRedirectCountdown(3);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -98,10 +97,19 @@ const MarkAttendance = () => {
       return;
     }
 
-    if (hasMarkedAttendanceToday(student.id)) {
-      setStudentName(student.name);
-      setStep('already-marked');
-      return;
+    // Check database for existing attendance today
+    try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const records = await getStudentAttendance(student.id, today, today);
+      
+      if (records && records.length > 0) {
+        setStudentName(student.name);
+        setStep('already-marked');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking attendance:', error);
+      // Continue with attendance marking if check fails
     }
 
     setStudentName(student.name);
@@ -109,8 +117,7 @@ const MarkAttendance = () => {
   };
 
   const handleFaceRecognitionSuccess = () => {
-    // Mark attendance after successful face verification
-    markAttendanceFromScan(studentId.toUpperCase());
+    // Attendance is already marked by the backend API in FaceRecognitionCapture
     setStep('success');
   };
 

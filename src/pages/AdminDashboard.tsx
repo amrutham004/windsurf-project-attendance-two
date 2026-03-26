@@ -4,14 +4,12 @@ import Footer from '@/components/attendance/Footer';
 import Scene3D from '@/components/3d/Scene3D';
 import FloatingCard from '@/components/3d/FloatingCard';
 import { 
-  getDashboardStats, 
-  getAttendanceRecords,
-  getRecordsForExport,
-  exportToCSV,
+  getTodayStats,
+  getTodayAttendanceList,
+  getAllAttendanceRecords,
   getWeeklySummary,
-  getTodayAttendanceStatus,
-  testCSVExport
-} from '@/lib/attendanceData';
+  exportRecordsToCSV
+} from '@/lib/api';
 import { AttendanceRecord } from '@/types/attendance';
 import { Users, UserCheck, Clock, UserX, Download, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -24,25 +22,64 @@ const AdminDashboard = () => {
   const [currentDate, setCurrentDate] = useState('');
 
   useEffect(() => {
-    const statsData = getDashboardStats();
-    setStats(statsData);
+    const fetchData = async () => {
+      try {
+        // Fetch today's stats from backend
+        const statsData = await getTodayStats();
+        setStats(statsData);
 
-    const today = getTodayAttendanceStatus();
-    setTodayRecords(today);
+        // Fetch today's attendance list from backend
+        const today = await getTodayAttendanceList();
+        setTodayRecords(today);
 
-    const weekly = getWeeklySummary();
-    setWeeklyData(weekly);
+        // Fetch weekly summary from backend
+        const weekly = await getWeeklySummary();
+        setWeeklyData(weekly);
 
-    const date = new Date();
-    setCurrentDate(date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+        const date = new Date();
+        setCurrentDate(date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      }
+    };
+
+    fetchData();
     
-    // Expose test function globally for debugging
-    (window as any).testCSVExport = testCSVExport;
+    // Refresh data every 10 seconds for real-time updates
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
-  const handleExport = () => {
-    const records = getRecordsForExport(exportFilter);
-    exportToCSV(records, exportFilter);
+  const handleExport = async () => {
+    try {
+      // Calculate date range based on filter
+      const today = new Date();
+      let startDate: string | undefined;
+      let endDate: string = today.toISOString().split('T')[0];
+
+      switch (exportFilter) {
+        case 'daily':
+          startDate = endDate;
+          break;
+        case 'weekly':
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - 6);
+          startDate = weekStart.toISOString().split('T')[0];
+          break;
+        case 'monthly':
+          const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+          startDate = monthStart.toISOString().split('T')[0];
+          break;
+      }
+
+      // Fetch records from backend
+      const records = await getAllAttendanceRecords(startDate, endDate);
+      
+      // Export to CSV
+      exportRecordsToCSV(records, exportFilter);
+    } catch (error) {
+      console.error('Error exporting attendance:', error);
+    }
   };
 
   return (

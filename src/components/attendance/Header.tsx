@@ -14,28 +14,46 @@ import { Button } from '@/components/ui/button';
 import { Home, ClipboardCheck, LayoutDashboard, User, Menu, X } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
+import { getAuthUser } from '@/lib/auth';
+import LogoutButton from '@/components/LogoutButton';
+
 const Header = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const user = getAuthUser();
 
-  // All navigation links available to everyone
-  const navLinks = [{
-    to: '/',
-    label: 'Home',
-    icon: Home
-  }, {
-    to: '/mark-attendance',
-    label: 'Mark Attendance',
-    icon: ClipboardCheck
-  }, {
-    to: '/student',
-    label: 'Student Dashboard',
-    icon: User
-  }, {
-    to: '/admin',
-    label: 'Admin Dashboard',
-    icon: LayoutDashboard
-  }];
+  // Navigation links based on user role
+  const getNavLinks = () => {
+    if (!user) return [];
+    
+    if (user.role === 'student') {
+      return [{
+        to: '/home',
+        label: 'Home',
+        icon: Home
+      }, {
+        to: '/mark-attendance',
+        label: 'Mark Attendance',
+        icon: ClipboardCheck
+      }, {
+        to: '/student',
+        label: 'Student Dashboard',
+        icon: User
+      }];
+    }
+    
+    if (user.role === 'admin') {
+      return [{
+        to: '/admin',
+        label: 'Admin Dashboard',
+        icon: LayoutDashboard
+      }];
+    }
+    
+    return [];
+  };
+
+  const navLinks = getNavLinks();
 
   // Check if a nav link is currently active
   const isActive = (path: string) => location.pathname === path;
@@ -58,7 +76,7 @@ const Header = () => {
         </Link>
 
         {/* Desktop Navigation - hidden on mobile */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-2">
           {navLinks.map(({ to, label, icon: Icon }) => (
             <Button 
               key={to} 
@@ -76,6 +94,7 @@ const Header = () => {
               </Link>
             </Button>
           ))}
+          <LogoutButton />
         </nav>
 
         {/* Mobile Menu Toggle Button */}
@@ -110,6 +129,9 @@ const Header = () => {
                 </Link>
               </Button>
             ))}
+            <div className="pt-2 border-t border-white/10 mt-2">
+              <LogoutButton />
+            </div>
           </div>
         </nav>
       )}

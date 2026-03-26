@@ -23,6 +23,10 @@ import AdminDashboard from "./pages/AdminDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import NotFound from "./pages/NotFound";
 
+// Import authentication components
+import Login from "./pages/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
+
 // Create a React Query client for data fetching/caching
 const queryClient = new QueryClient();
 
@@ -35,18 +39,70 @@ const App = () => (
       
       <BrowserRouter>
         <Routes>
-          {/* Student routes - accessible by all */}
-          <Route path="/" element={<Index />} />
-          <Route path="/mark-attendance" element={<MarkAttendance />} />
-          <Route path="/student" element={<StudentDashboard />} />
-          
-          {/* Student-side attendance flow (scanned from phone) */}
-          <Route path="/verify-attendance" element={<VerifyAttendance />} />
-          <Route path="/face-capture" element={<StudentFaceCapture />} />
+          {/* Public route - Login page */}
+          <Route path="/login" element={<Login />} />
 
-          {/* Admin/Teacher routes - accessible by all */}
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/teacher-qr" element={<TeacherQRDisplay />} />
+          {/* Student routes - protected, only accessible by students */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <Index />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/home" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <Index />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/mark-attendance" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <MarkAttendance />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/student" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Student-side attendance flow (scanned from phone) - student only */}
+          <Route 
+            path="/verify-attendance" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <VerifyAttendance />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/face-capture" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentFaceCapture />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Admin/Teacher routes - protected, only accessible by admin */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
 
           {/* 404 page for unknown routes */}
           <Route path="*" element={<NotFound />} />

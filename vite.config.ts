@@ -12,7 +12,19 @@ export default defineConfig(({ mode }) => ({
     https: {
       key: fs.readFileSync('./localhost+4-key.pem'),
       cert: fs.readFileSync('./localhost+4.pem'),
-    }
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/mark-attendance': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

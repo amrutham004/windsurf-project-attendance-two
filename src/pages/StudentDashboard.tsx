@@ -5,10 +5,9 @@ import Scene3D from '@/components/3d/Scene3D';
 import FloatingCard from '@/components/3d/FloatingCard';
 import { Input } from '@/components/ui/input';
 import { 
-  getStudentStats, 
-  getStudentById, 
-  getAttendanceRecords
-} from '@/lib/attendanceData';
+  getStudentAttendance
+} from '@/lib/api';
+import { getStudentById } from '@/lib/attendanceData';
 import { StudentStats, Student, AttendanceRecord } from '@/types/attendance';
 import { User, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
 
@@ -20,7 +19,7 @@ const StudentDashboard = () => {
   const [error, setError] = useState('');
 
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -34,16 +33,39 @@ const StudentDashboard = () => {
     }
 
     setSearchedStudent(student);
-    const studentStats = getStudentStats(student.id);
-    setStats(studentStats);
     
-    const records = getAttendanceRecords();
-    // Show last 30 days of attendance records
-    const filteredRecords = records
-      .filter(r => r.studentId === student.id)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 30); // Show up to 30 days
-    setStudentRecords(filteredRecords);
+    try {
+      // Fetch attendance records from backend API
+      const records = await getStudentAttendance(student.id);
+      
+      // Calculate stats from records
+      const totalDays = records.length;
+      const presentDays = records.filter(r => r.status === 'PRESENT').length;
+      const lateDays = records.filter(r => r.status === 'LATE_PRESENT').length;
+      const absentDays = records.filter(r => r.status === 'ABSENT').length;
+      const attendancePercentage = totalDays > 0 
+        ? Math.round(((presentDays + lateDays) / totalDays) * 100) 
+        : 0;
+      
+      const studentStats: StudentStats = {
+        totalDays,
+        daysPresent: presentDays,
+        daysLate: lateDays,
+        daysAbsent: absentDays,
+        attendancePercentage
+      };
+      
+      setStats(studentStats);
+      
+      // Show last 30 days of attendance records
+      const filteredRecords = records
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 30);
+      setStudentRecords(filteredRecords);
+    } catch (error) {
+      console.error('Error fetching student attendance:', error);
+      setError('Failed to fetch attendance data. Please try again.');
+    }
   };
 
   return (
