@@ -12,6 +12,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { I18nProvider } from "@/lib/i18n";
 
 // Import existing pages
 import Index from "./pages/Index";
@@ -31,6 +32,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <I18nProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       {/* Toast notifications */}
@@ -110,6 +112,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </I18nProvider>
 );
 
 export default App;

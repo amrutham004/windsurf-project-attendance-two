@@ -15,8 +15,10 @@ import {
 import { AttendanceRecord } from '@/types/attendance';
 import { Users, UserCheck, Clock, UserX, Download, BarChart3, RefreshCw, CheckCircle2, X, Smartphone } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useTranslation } from '@/lib/i18n';
 
 const AdminDashboard = () => {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({ totalStudents: 0, presentToday: 0, lateToday: 0, absentToday: 0 });
   const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
@@ -160,13 +162,13 @@ const AdminDashboard = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
                 <CheckCircle2 size={14} className="text-emerald-200" />
-                <span className="text-sm font-semibold text-white">Attendance Confirmed</span>
+                <span className="text-sm font-semibold text-white">{t('admin.attendanceConfirmed')}</span>
               </div>
               <p className="text-emerald-100 text-sm">
                 <span className="font-bold">{event.studentName}</span> ({event.studentId})
               </p>
               <p className="text-emerald-200/70 text-xs mt-0.5">
-                Marked at {event.time} via mobile device
+                {t('admin.markedAt')} {event.time} {t('admin.viaMobile')}
               </p>
             </div>
             <button
@@ -186,12 +188,12 @@ const AdminDashboard = () => {
         {/* Page Header */}
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Admin Dashboard</h1>
-            <p className="text-teal-100/70 text-sm">Overview for {currentDate}</p>
+            <h1 className="text-4xl font-bold text-white mb-2">{t('admin.title')}</h1>
+            <p className="text-teal-100/70 text-sm">{t('admin.overview')} {currentDate}</p>
             {lastSynced && (
               <p className="text-teal-300/50 text-xs mt-1 flex items-center gap-1">
                 <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
-                Last synced: {lastSynced.toLocaleTimeString()} • Auto-refreshing every 10s
+                {t('admin.lastSynced')} {lastSynced.toLocaleTimeString()} • {t('admin.autoRefresh')}
               </p>
             )}
           </div>
@@ -201,7 +203,7 @@ const AdminDashboard = () => {
             className="px-4 py-2 bg-teal-700/40 hover:bg-teal-600/50 border border-teal-500/30 rounded-xl text-sm text-teal-200 transition-all flex items-center gap-2 disabled:opacity-50"
           >
             <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-            {isRefreshing ? 'Syncing...' : 'Refresh'}
+            {isRefreshing ? t('admin.syncing') : t('admin.refresh')}
           </button>
         </div>
 
@@ -215,7 +217,7 @@ const AdminDashboard = () => {
                   <Users size={20} className="text-teal-300" />
                 </div>
                 <p className="text-3xl font-bold text-white mb-1">{stats.totalStudents}</p>
-                <p className="text-sm text-teal-200/70">Total Students</p>
+                <p className="text-sm text-teal-200/70">{t('admin.totalStudents')}</p>
               </div>
             </div>
           </FloatingCard>
@@ -228,7 +230,7 @@ const AdminDashboard = () => {
                   <UserCheck size={20} className="text-green-400" />
                 </div>
                 <p className="text-3xl font-bold text-white mb-1">{stats.presentToday}</p>
-                <p className="text-sm text-teal-200/70">Present Today</p>
+                <p className="text-sm text-teal-200/70">{t('admin.presentToday')}</p>
               </div>
             </div>
           </FloatingCard>
@@ -241,7 +243,7 @@ const AdminDashboard = () => {
                   <Clock size={20} className="text-yellow-400" />
                 </div>
                 <p className="text-3xl font-bold text-white mb-1">{stats.lateToday}</p>
-                <p className="text-sm text-teal-200/70">Late Today</p>
+                <p className="text-sm text-teal-200/70">{t('admin.lateToday')}</p>
               </div>
             </div>
           </FloatingCard>
@@ -254,7 +256,7 @@ const AdminDashboard = () => {
                   <UserX size={20} className="text-red-400" />
                 </div>
                 <p className="text-3xl font-bold text-white mb-1">{stats.absentToday}</p>
-                <p className="text-sm text-teal-200/70">Absent Today</p>
+                <p className="text-sm text-teal-200/70">{t('admin.absentToday')}</p>
               </div>
             </div>
           </FloatingCard>
@@ -266,7 +268,7 @@ const AdminDashboard = () => {
           <FloatingCard className="lg:col-span-2 p-6 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 size={20} className="text-teal-300" />
-              <h3 className="text-base font-semibold text-white">Weekly Attendance Summary</h3>
+              <h3 className="text-base font-semibold text-white">{t('admin.weeklyOverview')}</h3>
             </div>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={weeklyData}>
@@ -294,9 +296,9 @@ const AdminDashboard = () => {
                   wrapperStyle={{ paddingTop: '10px' }}
                   iconType="circle"
                 />
-                <Bar dataKey="present" fill="#22c55e" name="Present" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="late" fill="#f59e0b" name="Late" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="absent" fill="#ef4444" name="Absent" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="present" fill="#22c55e" name={t('admin.present')} radius={[8, 8, 0, 0]} />
+                <Bar dataKey="late" fill="#f59e0b" name={t('admin.late')} radius={[8, 8, 0, 0]} />
+                <Bar dataKey="absent" fill="#ef4444" name={t('admin.absent')} radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </FloatingCard>
@@ -317,7 +319,7 @@ const AdminDashboard = () => {
                       : 'bg-teal-900/30 text-teal-200 hover:bg-teal-900/50'
                   }`}
                 >
-                  Daily
+                  {t('admin.daily')}
                 </button>
                 <button
                   onClick={() => setExportFilter('weekly')}
@@ -327,7 +329,7 @@ const AdminDashboard = () => {
                       : 'bg-teal-900/30 text-teal-200 hover:bg-teal-900/50'
                   }`}
                 >
-                  Weekly
+                  {t('admin.weekly')}
                 </button>
                 <button
                   onClick={() => setExportFilter('monthly')}
@@ -337,7 +339,7 @@ const AdminDashboard = () => {
                       : 'bg-teal-900/30 text-teal-200 hover:bg-teal-900/50'
                   }`}
                 >
-                  Monthly
+                  {t('admin.monthly')}
                 </button>
               </div>
               <button
@@ -345,7 +347,7 @@ const AdminDashboard = () => {
                 className="w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
               >
                 <Download size={18} />
-                Download CSV
+                {t('admin.exportCSV')}
               </button>
               <p className="text-teal-200/60 text-xs text-center">
                 Export {exportFilter} attendance data
@@ -356,7 +358,7 @@ const AdminDashboard = () => {
 
         {/* Today's Attendance Table */}
         <FloatingCard className="p-6 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
-          <h3 className="text-base font-semibold text-white mb-4">Today's Attendance</h3>
+          <h3 className="text-base font-semibold text-white mb-4">{t('admin.todayRecords')}</h3>
           <div className="mb-4">
             <input
               type="text"
@@ -372,8 +374,8 @@ const AdminDashboard = () => {
                   <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Student ID</th>
                   <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Name</th>
                   <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Grade</th>
-                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Time</th>
-                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">Status</th>
+                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">{t('admin.time')}</th>
+                  <th className="text-left p-3 text-teal-200/70 font-medium text-xs uppercase">{t('admin.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -390,8 +392,8 @@ const AdminDashboard = () => {
                           record.status === 'LATE_PRESENT' ? 'bg-yellow-500/90 text-white' :
                           'bg-red-500/90 text-white'
                         }`}>
-                          {record.status === 'PRESENT' ? 'Present' :
-                           record.status === 'LATE_PRESENT' ? 'Late' : 'Absent'}
+                          {record.status === 'PRESENT' ? t('admin.present') :
+                           record.status === 'LATE_PRESENT' ? t('admin.late') : t('admin.absent')}
                         </span>
                       </td>
                     </tr>
@@ -399,7 +401,7 @@ const AdminDashboard = () => {
                 ) : (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-teal-200/60">
-                      No attendance records for today
+                      {t('admin.noRecords')}
                     </td>
                   </tr>
                 )}

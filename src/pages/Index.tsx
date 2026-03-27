@@ -16,8 +16,10 @@ import FloatingCard from '@/components/3d/FloatingCard';
 import GlassButton from '@/components/3d/GlassButton';
 import { ClipboardCheck, LayoutDashboard, Users, Clock, Sparkles } from 'lucide-react';
 import { CUTOFF_TIME } from '@/lib/attendanceData';
+import { useTranslation } from '@/lib/i18n';
 
 const Index = () => {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-teal-800 to-emerald-900 text-white overflow-hidden">
       {/* 3D Background Scene */}
@@ -40,11 +42,11 @@ const Index = () => {
           </div>
           
           <p className="text-xl md:text-2xl text-teal-100/80 mb-3 font-light">
-            Automated Attendance System
+            {t('home.subtitle')}
           </p>
           <p className="text-sm text-teal-200/60 flex items-center justify-center gap-2">
             <Clock size={14} />
-            Cutoff time: 1:00 PM
+            {t('home.cutoff')}
           </p>
         </div>
 
@@ -52,7 +54,7 @@ const Index = () => {
         <div className="flex justify-center mb-16">
           <GlassButton to="/mark-attendance" size="large">
             <ClipboardCheck size={24} />
-            Mark Attendance
+            {t('home.markAttendance')}
           </GlassButton>
         </div>
 
@@ -65,13 +67,13 @@ const Index = () => {
               </div>
               <div className="flex-1">
                 <h2 className="text-xl font-semibold font-display mb-2 text-white">
-                  Admin Dashboard
+                  {t('home.adminTitle')}
                 </h2>
                 <p className="text-sm text-teal-100/70 mb-4">
-                  View attendance statistics, reports, and manage student records.
+                  {t('home.adminDesc')}
                 </p>
                 <GlassButton to="/admin" variant="secondary">
-                  Open Dashboard
+                  {t('home.openDashboard')}
                 </GlassButton>
               </div>
             </div>
@@ -84,13 +86,13 @@ const Index = () => {
               </div>
               <div className="flex-1">
                 <h2 className="text-xl font-semibold font-display mb-2 text-white">
-                  Student Portal
+                  {t('home.studentTitle')}
                 </h2>
                 <p className="text-sm text-blue-100/70 mb-4">
-                  Check your attendance history and view your attendance percentage.
+                  {t('home.studentDesc')}
                 </p>
                 <GlassButton to="/student" variant="secondary">
-                  View My Attendance
+                  {t('home.viewAttendance')}
                 </GlassButton>
               </div>
             </div>
@@ -100,13 +102,13 @@ const Index = () => {
         {/* How It Works - 3D Steps */}
         <div className="text-center">
           <h2 className="text-2xl font-semibold font-display mb-8 text-teal-100">
-            How It Works
+            {t('home.howItWorks')}
           </h2>
           <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {[
-              { num: 1, title: 'Enter Student ID', desc: 'Students enter their unique ID' },
-              { num: 2, title: 'Scan QR Code', desc: 'Scan the daily attendance QR' },
-              { num: 3, title: 'Capture Face', desc: 'Take a photo for verification' },
+              { num: 1, title: t('home.step1Title'), desc: t('home.step1Desc') },
+              { num: 2, title: t('home.step2Title'), desc: t('home.step2Desc') },
+              { num: 3, title: t('home.step3Title'), desc: t('home.step3Desc') },
             ].map((step) => (
               <div 
                 key={step.num}

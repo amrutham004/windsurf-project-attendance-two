@@ -17,10 +17,12 @@ import Scene3D from '@/components/3d/Scene3D';
 import FloatingCard from '@/components/3d/FloatingCard';
 import { validateStudentQR, getStudentById } from '@/lib/attendanceData';
 import { CheckCircle, XCircle, Clock, AlertCircle, Camera, Loader2 } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 type Step = 'validating' | 'success' | 'error';
 
 const VerifyAttendance = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const qrData = searchParams.get('qr');
@@ -103,13 +105,13 @@ const VerifyAttendance = () => {
   const getErrorTitle = () => {
     switch (errorType) {
       case 'expired':
-        return 'QR Code Expired';
+        return t('verify.qrExpired');
       case 'used':
-        return 'Already Used';
+        return t('verify.alreadyUsed');
       case 'already':
-        return 'Already Recorded';
+        return t('verify.alreadyRecorded');
       default:
-        return 'Invalid QR Code';
+        return t('verify.invalidQR');
     }
   };
 
@@ -137,14 +139,14 @@ const VerifyAttendance = () => {
                 
                 <div className="space-y-2">
                   <h2 className="text-2xl font-bold font-display text-white">
-                    {step === 'validating' && 'Verifying QR Code...'}
-                    {step === 'success' && 'QR Code Verified!'}
+                    {step === 'validating' && t('verify.verifying')}
+                    {step === 'success' && t('verify.verified')}
                     {step === 'error' && getErrorTitle()}
                   </h2>
                   
                   <p className="text-cyan-100/80 text-sm">
-                    {step === 'validating' && 'Please wait while we validate your QR code'}
-                    {step === 'success' && 'Your QR code has been successfully validated'}
+                    {step === 'validating' && t('verify.pleaseWait')}
+                    {step === 'success' && t('verify.validatedMsg')}
                     {step === 'error' && message}
                   </p>
                 </div>
@@ -153,7 +155,7 @@ const VerifyAttendance = () => {
                 {studentName && (
                   <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                     <div className="space-y-1">
-                      <p className="text-sm text-cyan-100/60">Student Details</p>
+                      <p className="text-sm text-cyan-100/60">{t('verify.studentDetails')}</p>
                       <p className="text-lg font-semibold text-white">{studentName}</p>
                       <p className="text-sm font-mono text-cyan-300">{studentId}</p>
                     </div>
@@ -173,20 +175,20 @@ const VerifyAttendance = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <h3 className="text-xl font-bold text-white">Face Verification Required</h3>
+                    <h3 className="text-xl font-bold text-white">{t('verify.faceRequired')}</h3>
                     <p className="text-cyan-100/80 text-sm">
-                      Complete your attendance by scanning your face
+                      {t('verify.faceCompleteMsg')}
                     </p>
                   </div>
 
                   {/* Countdown Timer */}
                   <div className="bg-cyan-500/10 rounded-lg p-4 border border-cyan-500/20">
                     <div className="space-y-1">
-                      <p className="text-sm text-cyan-100/60">Auto-redirecting in</p>
+                      <p className="text-sm text-cyan-100/60">{t('verify.autoRedirect')}</p>
                       <div className="text-3xl font-mono font-bold text-cyan-300">
                         {countdown}
                       </div>
-                      <p className="text-xs text-cyan-100/60">seconds</p>
+                      <p className="text-xs text-cyan-100/60">{t('mark.seconds')}</p>
                     </div>
                   </div>
 
@@ -196,7 +198,7 @@ const VerifyAttendance = () => {
                     className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
                   >
                     <Camera size={20} />
-                    Start Face Verification
+                    {t('verify.startFace')}
                   </button>
                 </div>
               </FloatingCard>
@@ -208,7 +210,7 @@ const VerifyAttendance = () => {
                   <div className="w-16 h-16 mx-auto rounded-full bg-gray-500/20 flex items-center justify-center">
                     <Camera size={32} className="text-gray-400" />
                   </div>
-                  <p className="text-gray-400 text-sm">Face verification will be available after QR validation</p>
+                  <p className="text-gray-400 text-sm">{t('verify.faceAvailableAfter')}</p>
                 </div>
               </FloatingCard>
             )}
@@ -220,16 +222,16 @@ const VerifyAttendance = () => {
                     <XCircle size={32} className="text-red-400" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-red-400">Verification Failed</h3>
+                    <h3 className="text-lg font-semibold text-red-400">{t('verify.failed')}</h3>
                     <p className="text-cyan-100/80 text-sm">
-                      Please contact your teacher for assistance
+                      {t('verify.contactTeacher')}
                     </p>
                   </div>
                   <button
                     onClick={() => window.location.reload()}
                     className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
                   >
-                    Try Again
+                    {t('mark.tryAgain')}
                   </button>
                 </div>
               </FloatingCard>

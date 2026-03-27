@@ -5,8 +5,11 @@ import FloatingCard from '@/components/3d/FloatingCard';
 import { Input } from '@/components/ui/input';
 import { LogIn, User, Lock } from 'lucide-react';
 import { validateLogin, saveAuthUser, getAuthUser, getDefaultRedirectPath } from '@/lib/auth';
+import { useTranslation } from '@/lib/i18n';
+import LanguageSelector from '@/components/LanguageSelector';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -64,15 +67,15 @@ const Login = () => {
             <div className="w-20 h-20 rounded-full bg-teal-500/30 flex items-center justify-center mx-auto mb-4">
               <LogIn size={40} className="text-teal-200" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-teal-200/70">Sign in to access the Attendance System</p>
+            <h1 className="text-3xl font-bold text-white mb-2">{t('login.title')}</h1>
+            <p className="text-teal-200/70">{t('home.subtitle')}</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             {/* Username Input */}
             <div>
               <label className="block text-sm font-medium text-teal-200/90 mb-2">
-                Username
+                {t('login.username')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -93,7 +96,7 @@ const Login = () => {
             {/* Password Input */}
             <div>
               <label className="block text-sm font-medium text-teal-200/90 mb-2">
-                Password
+                {t('login.password')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -123,7 +126,7 @@ const Login = () => {
               disabled={loading}
               className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('login.signingIn') : t('login.signIn')}
             </button>
           </form>
 
@@ -144,8 +147,9 @@ const Login = () => {
         </FloatingCard>
       </main>
 
-      <footer className="relative z-10 py-4 text-center text-teal-200/50 text-sm">
-        <p>&copy; 2026 Smart Attendance System. All rights reserved.</p>
+      <footer className="relative z-10 py-4 text-center text-teal-200/50 text-sm flex items-center justify-center gap-4">
+        <p>&copy; 2026 AttendaGo. {t('footer.rights')}</p>
+        <LanguageSelector />
       </footer>
     </div>
   );

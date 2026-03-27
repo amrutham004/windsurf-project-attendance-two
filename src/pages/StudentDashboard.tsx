@@ -11,8 +11,10 @@ import {
 import { getStudentById } from '@/lib/attendanceData';
 import { StudentStats, Student, AttendanceRecord } from '@/types/attendance';
 import { User, Calendar, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 const StudentDashboard = () => {
+  const { t } = useTranslation();
   const [studentId, setStudentId] = useState('');
   const [searchedStudent, setSearchedStudent] = useState<Student | null>(null);
   const [stats, setStats] = useState<StudentStats | null>(null);
@@ -77,7 +79,7 @@ const StudentDashboard = () => {
     
     const student = getStudentById(studentId.toUpperCase());
     if (!student) {
-      setError('Student ID not found. Please check and try again.');
+      setError(t('student.notFound'));
       setSearchedStudent(null);
       activeStudentRef.current = null;
       setStats(null);
@@ -99,10 +101,10 @@ const StudentDashboard = () => {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">
-            Student Dashboard
+            {t('student.title')}
           </h1>
           <p className="text-teal-100/70 text-sm">
-            View your attendance history and statistics
+            {t('student.subtitle')}
           </p>
         </div>
 
@@ -110,7 +112,7 @@ const StudentDashboard = () => {
         <FloatingCard className="mb-6 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
           <form onSubmit={handleSearch}>
             <div className="mb-2">
-              <label className="text-teal-100 text-sm mb-2 block font-medium">Enter Your Student ID</label>
+              <label className="text-teal-100 text-sm mb-2 block font-medium">{t('mark.studentId')}</label>
               <div className="flex gap-3">
                 <Input
                   type="text"
@@ -124,7 +126,7 @@ const StudentDashboard = () => {
                   disabled={!studentId.trim()}
                   className="px-6 h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
-                  View Dashboard
+                  {t('student.search')}
                 </button>
               </div>
               <p className="text-teal-200/50 text-xs mt-2">Enter IDs: 20221CIT0043, 20221CIT0044, 20221CIT0045, 20221CIT0046</p>
@@ -153,7 +155,7 @@ const StudentDashboard = () => {
                     {lastSynced && (
                       <p className="text-teal-300/50 text-xs mt-1 flex items-center gap-1">
                         <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
-                        Last synced: {lastSynced.toLocaleTimeString()} • Auto-refreshing every 15s
+                        {t('admin.lastSynced')} {lastSynced.toLocaleTimeString()} • {t('student.autoRefresh')}
                       </p>
                     )}
                   </div>
@@ -204,7 +206,7 @@ const StudentDashboard = () => {
                     <Calendar size={20} className="text-teal-300" />
                   </div>
                   <p className="text-3xl font-bold text-white mb-1">{stats.totalDays}</p>
-                  <p className="text-sm text-teal-200/70">Total Days</p>
+                  <p className="text-sm text-teal-200/70">{t('student.totalDays')}</p>
                 </div>
               </FloatingCard>
 
@@ -215,7 +217,7 @@ const StudentDashboard = () => {
                     <CheckCircle size={20} className="text-green-400" />
                   </div>
                   <p className="text-3xl font-bold text-white mb-1">{stats.daysPresent}</p>
-                  <p className="text-sm text-teal-200/70">Present</p>
+                  <p className="text-sm text-teal-200/70">{t('student.daysPresent')}</p>
                 </div>
               </FloatingCard>
 
@@ -226,7 +228,7 @@ const StudentDashboard = () => {
                     <Clock size={20} className="text-yellow-400" />
                   </div>
                   <p className="text-3xl font-bold text-white mb-1">{stats.daysLate}</p>
-                  <p className="text-sm text-teal-200/70">Late</p>
+                  <p className="text-sm text-teal-200/70">{t('student.daysLate')}</p>
                 </div>
               </FloatingCard>
 
@@ -237,7 +239,7 @@ const StudentDashboard = () => {
                     <XCircle size={20} className="text-red-400" />
                   </div>
                   <p className="text-3xl font-bold text-white mb-1">{stats.daysAbsent}</p>
-                  <p className="text-sm text-teal-200/70">Absent</p>
+                  <p className="text-sm text-teal-200/70">{t('student.daysAbsent')}</p>
                 </div>
               </FloatingCard>
             </div>
@@ -279,22 +281,22 @@ const StudentDashboard = () => {
 
             {/* Recent Attendance Records */}
             <FloatingCard className="p-5 bg-teal-800/40 backdrop-blur-md border border-teal-600/30">
-              <h3 className="text-base font-semibold text-white mb-4">Recent Attendance Records</h3>
+              <h3 className="text-base font-semibold text-white mb-4">{t('student.recentRecords')}</h3>
               {studentRecords.length > 0 ? (
                 <div className="space-y-2">
                   {studentRecords.slice(0, 10).map((record, index) => (
                     <div key={index} className="flex items-center justify-between py-3 border-b border-teal-700/30 last:border-0">
                       <div>
                         <p className="text-white text-sm font-medium">{record.date}</p>
-                        <p className="text-teal-200/60 text-xs">Time: {record.time}</p>
+                        <p className="text-teal-200/60 text-xs">{t('student.time')}: {record.time || '-'}</p>
                       </div>
                       <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${
                         record.status === 'PRESENT' ? 'bg-green-500/90 text-white' :
                         record.status === 'LATE_PRESENT' ? 'bg-yellow-500/90 text-white' :
                         'bg-red-500/90 text-white'
                       }`}>
-                        {record.status === 'PRESENT' ? 'Present' :
-                         record.status === 'LATE_PRESENT' ? 'Late' : 'Absent'}
+                        {record.status === 'PRESENT' ? t('admin.present') :
+                         record.status === 'LATE_PRESENT' ? t('admin.late') : t('admin.absent')}
                       </span>
                     </div>
                   ))}
@@ -302,7 +304,7 @@ const StudentDashboard = () => {
               ) : (
                 <div className="text-center py-8">
                   <Calendar size={40} className="mx-auto mb-3 text-teal-400/30" />
-                  <p className="text-teal-200/60 text-sm">No attendance records found</p>
+                  <p className="text-teal-200/60 text-sm">{t('student.noRecords')}</p>
                 </div>
               )}
             </FloatingCard>

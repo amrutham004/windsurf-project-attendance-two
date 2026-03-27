@@ -34,6 +34,7 @@ import { getStudentById, saveFaceCapture, getFaceCapture } from '@/lib/attendanc
 import { markAttendance, getStudentAttendance } from '@/lib/api';
 
 import { Camera, X, RotateCcw, Check, AlertCircle, CheckCircle, User } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 
 
@@ -42,6 +43,7 @@ type Step = 'checking' | 'capture' | 'preview' | 'success' | 'error';
 
 
 const StudentFaceCapture = () => {
+  const { t } = useTranslation();
 
   const [searchParams] = useSearchParams();
 
@@ -321,7 +323,7 @@ const StudentFaceCapture = () => {
 
           <h1 className="text-2xl font-bold font-display bg-gradient-to-r from-cyan-300 to-teal-300 bg-clip-text text-transparent mb-2">
 
-            Face Verification
+            {t('face.title')}
 
           </h1>
 
@@ -344,10 +346,10 @@ const StudentFaceCapture = () => {
           <FloatingCard>
             <div className="text-center py-8">
               <div className="animate-pulse text-cyan-400 font-medium mb-2">
-                Verifying face...
+                {t('face.verifying')}
               </div>
               <p className="text-sm text-cyan-100/70">
-                Please wait while we verify your face and mark attendance
+                {t('face.verifyWait')}
               </p>
             </div>
           </FloatingCard>
@@ -425,7 +427,7 @@ const StudentFaceCapture = () => {
 
                   <Camera size={18} />
 
-                  Capture Face
+                  {t('face.capture')}
 
                 </GlassButton>
 
@@ -445,11 +447,11 @@ const StudentFaceCapture = () => {
 
                 <div>
 
-                  <p className="font-medium text-sm text-white">Position Your Face</p>
+                  <p className="font-medium text-sm text-white">{t('face.positionFace')}</p>
 
                   <p className="text-sm text-purple-100/70 mt-1">
 
-                    Center your face within the oval guide and ensure good lighting.
+                    {t('face.positionDesc')}
 
                   </p>
 
@@ -509,7 +511,7 @@ const StudentFaceCapture = () => {
 
                     <RotateCcw size={18} />
 
-                    Retake
+                    {t('face.retake')}
 
                   </GlassButton>
 
@@ -527,7 +529,7 @@ const StudentFaceCapture = () => {
 
                     <Check size={18} />
 
-                    Confirm
+                    {t('face.confirm')}
 
                   </GlassButton>
 
@@ -563,7 +565,7 @@ const StudentFaceCapture = () => {
 
                 <h2 className="text-xl font-bold font-display text-green-400">
 
-                  Verification Complete!
+                  {t('face.complete')}
 
                 </h2>
 
@@ -571,7 +573,7 @@ const StudentFaceCapture = () => {
 
                 <p className="text-cyan-100/70">
 
-                  Your attendance and face photo have been recorded successfully.
+                  {t('face.completeMsg')}
 
                 </p>
 
@@ -601,7 +603,7 @@ const StudentFaceCapture = () => {
 
                   <GlassButton to="/" variant="secondary" className="w-full">
 
-                    Return to Home
+                    {t('face.returnHome')}
 
                   </GlassButton>
 
@@ -637,7 +639,7 @@ const StudentFaceCapture = () => {
 
                 <h2 className="text-xl font-bold font-display text-red-400">
 
-                  Cannot Capture Face
+                  {t('face.cannotCapture')}
 
                 </h2>
 
@@ -651,7 +653,7 @@ const StudentFaceCapture = () => {
 
                   <GlassButton to="/" variant="secondary" className="w-full">
 
-                    Return to Home
+                    {t('face.returnHome')}
 
                   </GlassButton>
 

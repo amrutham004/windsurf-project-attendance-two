@@ -30,10 +30,12 @@ import { getStudentAttendance, getRecentAttendanceEvents } from '@/lib/api';
 import { ArrowLeft, CheckCircle, Clock, Shield, QrCode, Smartphone, ScanFace, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
+import { useTranslation } from '@/lib/i18n';
 
 type Step = 'input' | 'qr-display' | 'qr-verified' | 'face-capture' | 'already-marked' | 'success' | 'error';
 
 const MarkAttendance = () => {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('input');
   const [studentId, setStudentId] = useState('');
   const [studentName, setStudentName] = useState('');
@@ -177,7 +179,7 @@ const MarkAttendance = () => {
           className="inline-flex items-center gap-2 text-teal-300/70 hover:text-teal-300 transition-colors mb-6"
         >
           <ArrowLeft size={16} />
-          Back to Home
+          {t('mark.backHome')}
         </Link>
 
         {/* Step: Input - Student ID Entry */}
@@ -188,27 +190,27 @@ const MarkAttendance = () => {
                 <Shield size={40} className="text-teal-400" />
               </div>
               <h1 className="text-3xl font-bold font-display bg-gradient-to-r from-green-300 via-teal-300 to-blue-300 bg-clip-text text-transparent mb-2">
-                Mark Attendance
+                {t('mark.title')}
               </h1>
               <p className="text-teal-100/80 text-lg">
-                Dual Verification: QR Code + Face Recognition
+                {t('mark.dualVerification')}
               </p>
             </div>
 
             <FloatingCard>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="studentId" className="text-teal-100">Student ID</Label>
+                  <Label htmlFor="studentId" className="text-teal-100">{t('mark.studentId')}</Label>
                   <Input
                     id="studentId"
-                    placeholder="e.g., 20221CIT0043"
+                    placeholder={t('mark.studentIdPlaceholder')}
                     value={studentId}
                     onChange={(e) => setStudentId(e.target.value)}
                     required
                     className="text-center text-lg font-mono uppercase bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   />
                   <p className="text-xs text-teal-200/60">
-                    Example: 20221CIT0043 (Amrutha M)
+                    {t('mark.studentIdHint')}
                   </p>
                 </div>
 
@@ -217,7 +219,7 @@ const MarkAttendance = () => {
                 )}
 
                 <GlassButton variant="primary" className="w-full">
-                  Start Verification
+                  {t('mark.startVerification')}
                 </GlassButton>
               </form>
             </FloatingCard>
@@ -230,9 +232,9 @@ const MarkAttendance = () => {
                     <span className="text-teal-300 font-bold">1</span>
                   </div>
                   <div>
-                    <p className="font-medium text-sm text-white">QR Code Verification</p>
+                    <p className="font-medium text-sm text-white">{t('mark.qrVerify')}</p>
                     <p className="text-sm text-blue-100/70 mt-1">
-                      Scan the generated QR code with your phone camera
+                      {t('mark.qrVerifyDesc')}
                     </p>
                   </div>
                 </div>
@@ -241,9 +243,9 @@ const MarkAttendance = () => {
                     <span className="text-purple-300 font-bold">2</span>
                   </div>
                   <div>
-                    <p className="font-medium text-sm text-white">Face Recognition</p>
+                    <p className="font-medium text-sm text-white">{t('mark.faceRecognition')}</p>
                     <p className="text-sm text-blue-100/70 mt-1">
-                      Verify your identity with facial recognition
+                      {t('mark.faceRecognitionDesc')}
                     </p>
                   </div>
                 </div>
@@ -273,18 +275,18 @@ const MarkAttendance = () => {
                 <QrCode size={32} className="text-teal-400" />
               </div>
               <h1 className="text-2xl font-bold font-display bg-gradient-to-r from-green-300 via-teal-300 to-blue-300 bg-clip-text text-transparent mb-2">
-                Step 1: QR Code Verification
+                {t('mark.qrStep')}
               </h1>
               <p className="text-teal-100/70 flex items-center justify-center gap-2">
                 <Smartphone size={16} />
-                Scan with your phone camera
+                {t('mark.scanWithPhone')}
               </p>
             </div>
 
             <FloatingCard>
               {/* Student Info */}
               <div className="text-center mb-4 pb-4 border-b border-white/10">
-                <p className="text-sm text-teal-200/60">Student</p>
+                <p className="text-sm text-teal-200/60">{t('mark.student')}</p>
                 <p className="text-lg font-bold text-white">{studentName}</p>
                 <p className="text-sm font-mono text-teal-300/70">{studentId.toUpperCase()}</p>
               </div>
@@ -308,7 +310,7 @@ const MarkAttendance = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1.5 text-teal-200/60">
                     <Clock size={14} />
-                    Valid for
+                    {t('mark.validFor')}
                   </span>
                   <span className={`font-mono font-bold ${timeRemaining <= 10 ? 'text-red-400' : 'text-teal-300'}`}>
                     {timeRemaining}s
@@ -324,10 +326,10 @@ const MarkAttendance = () => {
             {/* Simulate QR verification button for testing */}
             <div className="space-y-3">
               <GlassButton variant="primary" onClick={handleQRVerified} className="w-full">
-                Simulate QR Scan (For Testing)
+                {t('mark.simulateQR')}
               </GlassButton>
               <GlassButton variant="secondary" onClick={handleReset} className="w-full">
-                Cancel
+                {t('mark.cancel')}
               </GlassButton>
             </div>
           </div>
@@ -341,9 +343,9 @@ const MarkAttendance = () => {
                 <div className="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
                   <CheckCircle size={40} className="text-green-400" />
                 </div>
-                <h2 className="text-xl font-bold font-display text-green-400">QR Code Verified!</h2>
+                <h2 className="text-xl font-bold font-display text-green-400">{t('mark.qrVerified')}</h2>
                 <p className="text-teal-100/70">
-                  QR verification successful for <strong className="text-white">{studentName}</strong>
+                  {t('mark.qrSuccess')} <strong className="text-white">{studentName}</strong>
                 </p>
               </div>
             </FloatingCard>
@@ -354,17 +356,17 @@ const MarkAttendance = () => {
                   <ScanFace size={32} className="text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white mb-2">Step 2: Face Recognition</h3>
+                  <h3 className="text-lg font-bold text-white mb-2">{t('mark.faceStep')}</h3>
                   <p className="text-teal-100/70 mb-4">
-                    Redirecting to face verification...
+                    {t('mark.redirecting')}
                   </p>
                   <div className="text-4xl font-mono font-bold text-purple-300">
                     {redirectCountdown}
                   </div>
-                  <p className="text-sm text-teal-200/60 mt-2">seconds</p>
+                  <p className="text-sm text-teal-200/60 mt-2">{t('mark.seconds')}</p>
                 </div>
                 <GlassButton variant="primary" onClick={() => setStep('face-capture')} className="w-full">
-                  Start Face Verification Now
+                  {t('mark.startFaceNow')}
                 </GlassButton>
               </div>
             </FloatingCard>
@@ -379,19 +381,19 @@ const MarkAttendance = () => {
                 <div className="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
                   <CheckCircle size={40} className="text-green-400" />
                 </div>
-                <h2 className="text-xl font-bold font-display text-green-400">Attendance Marked Successfully!</h2>
+                <h2 className="text-xl font-bold font-display text-green-400">{t('mark.success')}</h2>
                 <p className="text-teal-100/70">
-                  Attendance has been recorded for <strong className="text-white">{studentName}</strong> ({studentId.toUpperCase()}).
+                  {t('mark.recorded')} <strong className="text-white">{studentName}</strong> ({studentId.toUpperCase()}).
                 </p>
 
                 {/* Sync confirmation */}
                 <div className="bg-emerald-500/10 border border-emerald-400/20 rounded-xl p-4 text-sm space-y-2">
                   <div className="flex items-center gap-2 text-emerald-300">
                     <CheckCircle size={16} />
-                    <span className="font-medium">Synced to all dashboards</span>
+                    <span className="font-medium">{t('mark.synced')}</span>
                   </div>
                   <p className="text-teal-200/60 text-xs">
-                    Admin Dashboard and Student Dashboard will show this record automatically.
+                    {t('mark.syncDesc')}
                   </p>
                 </div>
               </div>
@@ -399,16 +401,16 @@ const MarkAttendance = () => {
               <div className="mt-6 space-y-3">
                 <GlassButton to="/student" variant="primary" className="w-full">
                   <User size={16} className="mr-2" />
-                  View Student Dashboard
+                  {t('mark.viewStudent')}
                 </GlassButton>
                 <GlassButton to="/admin" variant="secondary" className="w-full">
-                  View Admin Dashboard
+                  {t('mark.viewAdmin')}
                 </GlassButton>
                 <button 
                   onClick={handleReset}
                   className="w-full text-teal-300/70 hover:text-teal-300 transition-colors text-sm"
                 >
-                  Mark Another Attendance
+                  {t('mark.markAnother')}
                 </button>
               </div>
             </FloatingCard>
@@ -423,27 +425,27 @@ const MarkAttendance = () => {
                 <div className="w-20 h-20 mx-auto rounded-full bg-red-500/20 flex items-center justify-center">
                   <ScanFace size={40} className="text-red-400" />
                 </div>
-                <h2 className="text-xl font-bold font-display text-red-400">Face Not Verified</h2>
+                <h2 className="text-xl font-bold font-display text-red-400">{t('mark.faceNotVerified')}</h2>
                 <p className="text-teal-100/70">
                   {error || 'Face verification failed. No matching face photo found for your student ID.'}
                 </p>
                 <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-sm text-red-300">
-                  <p className="font-medium mb-2">Possible reasons:</p>
+                  <p className="font-medium mb-2">{t('mark.possibleReasons')}</p>
                   <ul className="text-left space-y-1 text-xs">
-                    <li>• No face photo registered in the system</li>
-                    <li>• Face does not match registered photo</li>
-                    <li>• Poor lighting conditions</li>
-                    <li>• Face not clearly visible</li>
+                    <li>• {t('mark.reason1')}</li>
+                    <li>• {t('mark.reason2')}</li>
+                    <li>• {t('mark.reason3')}</li>
+                    <li>• {t('mark.reason4')}</li>
                   </ul>
                 </div>
               </div>
 
               <div className="mt-8 space-y-3">
                 <GlassButton variant="primary" onClick={handleReset} className="w-full">
-                  Try Again
+                  {t('mark.tryAgain')}
                 </GlassButton>
                 <GlassButton to="/" variant="secondary" className="w-full">
-                  Back to Home
+                  {t('mark.backHome')}
                 </GlassButton>
               </div>
             </FloatingCard>
@@ -458,21 +460,21 @@ const MarkAttendance = () => {
                 <div className="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
                   <CheckCircle size={40} className="text-green-400" />
                 </div>
-                <h2 className="text-xl font-bold font-display text-green-400">Already Recorded!</h2>
+                <h2 className="text-xl font-bold font-display text-green-400">{t('mark.alreadyRecorded')}</h2>
                 <p className="text-teal-100/70">
-                  Attendance for <strong className="text-white">{studentName}</strong> has already been recorded for today.
+                  <strong className="text-white">{studentName}</strong> {t('mark.alreadyMsg')}
                 </p>
               </div>
 
               <div className="mt-8 space-y-3">
                 <GlassButton to="/student" variant="secondary" className="w-full">
-                  View My Attendance
+                  {t('home.viewAttendance')}
                 </GlassButton>
                 <button 
                   onClick={handleReset}
                   className="w-full text-teal-300/70 hover:text-teal-300 transition-colors text-sm"
                 >
-                  Use Different ID
+                  {t('mark.useDifferentId')}
                 </button>
               </div>
             </FloatingCard>

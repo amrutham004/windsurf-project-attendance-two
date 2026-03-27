@@ -16,11 +16,14 @@ import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
 import { getAuthUser } from '@/lib/auth';
 import LogoutButton from '@/components/LogoutButton';
+import LanguageSelector from '@/components/LanguageSelector';
+import { useTranslation } from '@/lib/i18n';
 
 const Header = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const user = getAuthUser();
+  const { t } = useTranslation();
 
   // Navigation links based on user role
   const getNavLinks = () => {
@@ -29,15 +32,15 @@ const Header = () => {
     if (user.role === 'student') {
       return [{
         to: '/home',
-        label: 'Home',
+        label: t('nav.home'),
         icon: Home
       }, {
         to: '/mark-attendance',
-        label: 'Mark Attendance',
+        label: t('nav.markAttendance'),
         icon: ClipboardCheck
       }, {
         to: '/student',
-        label: 'Student Dashboard',
+        label: t('nav.studentDashboard'),
         icon: User
       }];
     }
@@ -45,7 +48,7 @@ const Header = () => {
     if (user.role === 'admin') {
       return [{
         to: '/admin',
-        label: 'Admin Dashboard',
+        label: t('nav.adminDashboard'),
         icon: LayoutDashboard
       }];
     }
@@ -94,6 +97,7 @@ const Header = () => {
               </Link>
             </Button>
           ))}
+          <LanguageSelector />
           <LogoutButton />
         </nav>
 
@@ -129,7 +133,8 @@ const Header = () => {
                 </Link>
               </Button>
             ))}
-            <div className="pt-2 border-t border-white/10 mt-2">
+            <div className="pt-2 border-t border-white/10 mt-2 flex items-center gap-2">
+              <LanguageSelector />
               <LogoutButton />
             </div>
           </div>
