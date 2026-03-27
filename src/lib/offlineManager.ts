@@ -1,347 +1,338 @@
 /**
  * src/lib/offlineManager.ts - IndexedDB Offline Attendance Manager
  * 
- * Manages offline attendance storage and synchronization
+ * Manages offline attendance storage and synchronization.
+ * When the network is unavailable, attendance records (studentId, studentName,
+ * face image, timestamp) are persisted to IndexedDB. When connectivity returns
+ * the manager automatically replays each record through the standard
+ * /mark-attendance endpoint so the backend processes them identically to
+ * online submissions.
  */
 
-interface OfflineAttendanceRecord {
-    id?: string;
+const API_BASE_URL = import.meta.env.VITE_API_URL !== undefined
+    ? import.meta.env.VITE_API_URL
+    : 'http://localhost:8000';
+
+export interface OfflineAttendanceRecord {
+    id?: number;
     studentId: string;
     studentName: string;
     image: string;
     timestamp: string;
-    syncStatus: 'pending' | 'synced' | 'failed';
+    syncStatus: 'pending' | 'syncing' | 'synced' | 'failed';
+    retryCount: number;
+    lastError?: string;
 }
 
-interface SyncResult {
-    success: boolean;
-    message: string;
-    results: Array<{
-        studentId: string;
-        success: boolean;
-        message: string;
-    }>;
-    summary: {
-        total: number;
-        success: number;
-        failed: number;
-    };
+export interface OfflineStats {
+    pending: number;
+    failed: number;
+    total: number;
+    isOnline: boolean;
+    syncInProgress: boolean;
 }
+
+type StatusListener = (stats: OfflineStats) => void;
 
 class OfflineManager {
     private dbName = 'AttendanceOfflineDB';
-    private dbVersion = 1;
+    private dbVersion = 2;
     private storeName = 'offlineAttendance';
     private db: IDBDatabase | null = null;
+    private dbReady: Promise<void>;
     private syncInProgress = false;
+    private retryTimer: number | null = null;
+    private listeners: Set<StatusListener> = new Set();
+    private static MAX_RETRIES = 5;
+    private static RETRY_INTERVAL_MS = 30_000; // 30 seconds
 
     constructor() {
-        this.initDB();
+        this.dbReady = this.initDB();
         this.setupOnlineListener();
+        this.startRetryTimer();
     }
 
-    /**
-     * Initialize IndexedDB database
-     */
+    // ─── Database ──────────────────────────────────────────────
+
     private async initDB(): Promise<void> {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.dbVersion);
 
             request.onerror = () => {
-                console.error('Failed to open IndexedDB:', request.error);
+                console.error('[OfflineManager] Failed to open IndexedDB:', request.error);
                 reject(request.error);
             };
 
             request.onsuccess = () => {
                 this.db = request.result;
-                console.log('IndexedDB initialized successfully');
+                console.log('[OfflineManager] IndexedDB ready');
                 resolve();
             };
 
             request.onupgradeneeded = (event) => {
                 const db = (event.target as IDBOpenDBRequest).result;
-                
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    const store = db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
-                    store.createIndex('syncStatus', 'syncStatus', { unique: false });
-                    store.createIndex('timestamp', 'timestamp', { unique: false });
-                    store.createIndex('studentId', 'studentId', { unique: false });
+
+                // Drop the old store if it exists (schema change)
+                if (db.objectStoreNames.contains(this.storeName)) {
+                    db.deleteObjectStore(this.storeName);
                 }
+
+                const store = db.createObjectStore(this.storeName, {
+                    keyPath: 'id',
+                    autoIncrement: true,
+                });
+                store.createIndex('syncStatus', 'syncStatus', { unique: false });
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+                store.createIndex('studentId', 'studentId', { unique: false });
             };
         });
     }
 
-    /**
-     * Setup online/offline event listeners
-     */
+    private async ensureDB(): Promise<void> {
+        await this.dbReady;
+    }
+
+    // ─── Connectivity ──────────────────────────────────────────
+
     private setupOnlineListener(): void {
         window.addEventListener('online', () => {
-            console.log('Device is online - attempting to sync offline data');
+            console.log('[OfflineManager] Back online – starting sync');
+            this.notifyListeners();
             this.syncPendingRecords();
         });
 
         window.addEventListener('offline', () => {
-            console.log('Device is offline - attendance will be stored locally');
+            console.log('[OfflineManager] Went offline – records will queue locally');
+            this.notifyListeners();
         });
     }
 
-    /**
-     * Store attendance record offline
-     */
-    async storeAttendanceRecord(record: Omit<OfflineAttendanceRecord, 'id' | 'syncStatus'>): Promise<string> {
-        if (!this.db) {
-            await this.initDB();
-        }
-
-        const offlineRecord: OfflineAttendanceRecord = {
-            ...record,
-            syncStatus: 'pending',
-            timestamp: record.timestamp || new Date().toISOString()
-        };
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.add(offlineRecord);
-
-            request.onsuccess = () => {
-                const id = request.result as string;
-                console.log(`Offline attendance record stored with ID: ${id}`);
-                resolve(id);
-            };
-
-            request.onerror = () => {
-                console.error('Failed to store offline record:', request.error);
-                reject(request.error);
-            };
-        });
-    }
-
-    /**
-     * Get all pending offline records
-     */
-    async getPendingRecords(): Promise<OfflineAttendanceRecord[]> {
-        if (!this.db) {
-            await this.initDB();
-        }
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            const index = store.index('syncStatus');
-            const request = index.getAll('pending');
-
-            request.onsuccess = () => {
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                console.error('Failed to get pending records:', request.error);
-                reject(request.error);
-            };
-        });
-    }
-
-    /**
-     * Get all offline records
-     */
-    async getAllRecords(): Promise<OfflineAttendanceRecord[]> {
-        if (!this.db) {
-            await this.initDB();
-        }
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.getAll();
-
-            request.onsuccess = () => {
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                console.error('Failed to get all records:', request.error);
-                reject(request.error);
-            };
-        });
-    }
-
-    /**
-     * Update record sync status
-     */
-    async updateRecordStatus(id: string, status: 'synced' | 'failed'): Promise<void> {
-        if (!this.db) {
-            await this.initDB();
-        }
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            const getRequest = store.get(id);
-
-            getRequest.onsuccess = () => {
-                const record = getRequest.result;
-                if (record) {
-                    record.syncStatus = status;
-                    const updateRequest = store.put(record);
-
-                    updateRequest.onsuccess = () => {
-                        console.log(`Record ${id} status updated to ${status}`);
-                        resolve();
-                    };
-
-                    updateRequest.onerror = () => {
-                        console.error('Failed to update record status:', updateRequest.error);
-                        reject(updateRequest.error);
-                    };
-                } else {
-                    reject(new Error('Record not found'));
-                }
-            };
-
-            getRequest.onerror = () => {
-                console.error('Failed to get record for status update:', getRequest.error);
-                reject(getRequest.error);
-            };
-        });
-    }
-
-    /**
-     * Delete synced records (cleanup)
-     */
-    async deleteSyncedRecords(): Promise<void> {
-        if (!this.db) {
-            await this.initDB();
-        }
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            const index = store.index('syncStatus');
-            const request = index.openCursor(IDBKeyRange.only('synced'));
-
-            request.onsuccess = (event) => {
-                const cursor = (event.target as IDBRequest).result;
-                if (cursor) {
-                    cursor.delete();
-                    cursor.continue();
-                } else {
-                    console.log('All synced records deleted');
-                    resolve();
-                }
-            };
-
-            request.onerror = () => {
-                console.error('Failed to delete synced records:', request.error);
-                reject(request.error);
-            };
-        });
-    }
-
-    /**
-     * Sync pending records to server
-     */
-    async syncPendingRecords(): Promise<SyncResult> {
-        if (this.syncInProgress) {
-            return {
-                success: false,
-                message: 'Sync already in progress',
-                results: [],
-                summary: { total: 0, success: 0, failed: 0 }
-            };
-        }
-
-        this.syncInProgress = true;
-
-        try {
-            const pendingRecords = await this.getPendingRecords();
-            
-            if (pendingRecords.length === 0) {
-                this.syncInProgress = false;
-                return {
-                    success: true,
-                    message: 'No pending records to sync',
-                    results: [],
-                    summary: { total: 0, success: 0, failed: 0 }
-                };
+    private startRetryTimer(): void {
+        if (this.retryTimer) clearInterval(this.retryTimer);
+        this.retryTimer = window.setInterval(() => {
+            if (navigator.onLine && !this.syncInProgress) {
+                this.syncPendingRecords();
             }
-
-            console.log(`Syncing ${pendingRecords.length} offline attendance records`);
-
-            // Send to backend
-            const response = await fetch('/api/sync-offline-attendance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(pendingRecords)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Sync failed: ${response.statusText}`);
-            }
-
-            const result: SyncResult = await response.json();
-
-            // Update local record statuses based on server response
-            for (const recordResult of result.results) {
-                const localRecord = pendingRecords.find(r => r.studentId === recordResult.studentId);
-                if (localRecord && localRecord.id) {
-                    const newStatus = recordResult.success ? 'synced' : 'failed';
-                    await this.updateRecordStatus(localRecord.id, newStatus);
-                }
-            }
-
-            // Cleanup synced records
-            if (result.summary.success > 0) {
-                await this.deleteSyncedRecords();
-            }
-
-            console.log('Sync completed:', result);
-            return result;
-
-        } catch (error) {
-            console.error('Sync failed:', error);
-            return {
-                success: false,
-                message: `Sync failed: ${error}`,
-                results: [],
-                summary: { total: 0, success: 0, failed: 0 }
-            };
-        } finally {
-            this.syncInProgress = false;
-        }
+        }, OfflineManager.RETRY_INTERVAL_MS);
     }
 
-    /**
-     * Check if device is online
-     */
     isOnline(): boolean {
         return navigator.onLine;
     }
 
-    /**
-     * Get offline statistics
-     */
-    async getOfflineStats(): Promise<{
-        pending: number;
-        synced: number;
-        failed: number;
-        total: number;
-    }> {
-        const allRecords = await this.getAllRecords();
-        
-        return {
-            pending: allRecords.filter(r => r.syncStatus === 'pending').length,
-            synced: allRecords.filter(r => r.syncStatus === 'synced').length,
-            failed: allRecords.filter(r => r.syncStatus === 'failed').length,
-            total: allRecords.length
+    // ─── Storage ───────────────────────────────────────────────
+
+    async storeRecord(record: {
+        studentId: string;
+        studentName: string;
+        image: string;
+        timestamp?: string;
+    }): Promise<number> {
+        await this.ensureDB();
+
+        const offlineRecord: OfflineAttendanceRecord = {
+            studentId: record.studentId,
+            studentName: record.studentName,
+            image: record.image,
+            timestamp: record.timestamp || new Date().toISOString(),
+            syncStatus: 'pending',
+            retryCount: 0,
         };
+
+        return new Promise((resolve, reject) => {
+            const tx = this.db!.transaction([this.storeName], 'readwrite');
+            const store = tx.objectStore(this.storeName);
+            const req = store.add(offlineRecord);
+
+            req.onsuccess = () => {
+                const id = req.result as number;
+                console.log(`[OfflineManager] Record stored #${id} for ${record.studentId}`);
+                this.notifyListeners();
+                resolve(id);
+            };
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async getPendingRecords(): Promise<OfflineAttendanceRecord[]> {
+        await this.ensureDB();
+        return new Promise((resolve, reject) => {
+            const tx = this.db!.transaction([this.storeName], 'readonly');
+            const store = tx.objectStore(this.storeName);
+            const idx = store.index('syncStatus');
+
+            // Get both 'pending' and 'failed' (for retry)
+            const results: OfflineAttendanceRecord[] = [];
+            const req = store.openCursor();
+            req.onsuccess = (e) => {
+                const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
+                if (cursor) {
+                    const rec = cursor.value as OfflineAttendanceRecord;
+                    if (rec.syncStatus === 'pending' || (rec.syncStatus === 'failed' && rec.retryCount < OfflineManager.MAX_RETRIES)) {
+                        results.push(rec);
+                    }
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async getAllRecords(): Promise<OfflineAttendanceRecord[]> {
+        await this.ensureDB();
+        return new Promise((resolve, reject) => {
+            const tx = this.db!.transaction([this.storeName], 'readonly');
+            const req = tx.objectStore(this.storeName).getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    private async updateRecord(record: OfflineAttendanceRecord): Promise<void> {
+        await this.ensureDB();
+        return new Promise((resolve, reject) => {
+            const tx = this.db!.transaction([this.storeName], 'readwrite');
+            const req = tx.objectStore(this.storeName).put(record);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    private async deleteRecord(id: number): Promise<void> {
+        await this.ensureDB();
+        return new Promise((resolve, reject) => {
+            const tx = this.db!.transaction([this.storeName], 'readwrite');
+            const req = tx.objectStore(this.storeName).delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    // ─── Sync ──────────────────────────────────────────────────
+
+    async syncPendingRecords(): Promise<{ synced: number; failed: number }> {
+        if (this.syncInProgress || !navigator.onLine) {
+            return { synced: 0, failed: 0 };
+        }
+
+        this.syncInProgress = true;
+        this.notifyListeners();
+
+        let synced = 0;
+        let failed = 0;
+
+        try {
+            const pending = await this.getPendingRecords();
+            if (pending.length === 0) return { synced: 0, failed: 0 };
+
+            console.log(`[OfflineManager] Syncing ${pending.length} records…`);
+
+            for (const record of pending) {
+                try {
+                    record.syncStatus = 'syncing';
+                    await this.updateRecord(record);
+
+                    const response = await fetch(`${API_BASE_URL}/mark-attendance`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            studentId: record.studentId,
+                            studentName: record.studentName,
+                            image: record.image,
+                        }),
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            // Successfully synced — remove from IndexedDB
+                            await this.deleteRecord(record.id!);
+                            synced++;
+                            console.log(`[OfflineManager] ✓ Synced ${record.studentId}`);
+                        } else {
+                            // Server rejected (e.g. face mismatch) — mark failed
+                            record.syncStatus = 'failed';
+                            record.retryCount++;
+                            record.lastError = data.message || 'Server rejected';
+                            await this.updateRecord(record);
+                            failed++;
+                        }
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (err) {
+                    // Network error — keep as pending for next retry
+                    record.syncStatus = 'pending';
+                    record.retryCount++;
+                    record.lastError = err instanceof Error ? err.message : String(err);
+                    await this.updateRecord(record);
+                    failed++;
+                    console.warn(`[OfflineManager] ✗ Failed ${record.studentId}:`, err);
+                }
+            }
+
+            console.log(`[OfflineManager] Sync done: ${synced} synced, ${failed} failed`);
+        } catch (error) {
+            console.error('[OfflineManager] Sync error:', error);
+        } finally {
+            this.syncInProgress = false;
+            this.notifyListeners();
+        }
+
+        return { synced, failed };
+    }
+
+    // ─── Status & Listeners ────────────────────────────────────
+
+    subscribe(listener: StatusListener): () => void {
+        this.listeners.add(listener);
+        // Immediately fire current stats
+        this.getStats().then(listener);
+        return () => { this.listeners.delete(listener); };
+    }
+
+    private async notifyListeners(): Promise<void> {
+        const stats = await this.getStats();
+        this.listeners.forEach((fn) => {
+            try { fn(stats); } catch (e) { console.error(e); }
+        });
+    }
+
+    async getStats(): Promise<OfflineStats> {
+        try {
+            const all = await this.getAllRecords();
+            return {
+                pending: all.filter((r) => r.syncStatus === 'pending' || r.syncStatus === 'syncing').length,
+                failed: all.filter((r) => r.syncStatus === 'failed').length,
+                total: all.length,
+                isOnline: navigator.onLine,
+                syncInProgress: this.syncInProgress,
+            };
+        } catch {
+            return { pending: 0, failed: 0, total: 0, isOnline: navigator.onLine, syncInProgress: false };
+        }
+    }
+
+    async clearFailedRecords(): Promise<void> {
+        await this.ensureDB();
+        const all = await this.getAllRecords();
+        for (const rec of all) {
+            if (rec.syncStatus === 'failed' && rec.id) {
+                await this.deleteRecord(rec.id);
+            }
+        }
+        this.notifyListeners();
+    }
+
+    cleanup(): void {
+        if (this.retryTimer) {
+            clearInterval(this.retryTimer);
+            this.retryTimer = null;
+        }
     }
 }
 
 // Export singleton instance
 export const offlineManager = new OfflineManager();
-
-// Export types
-export type { OfflineAttendanceRecord, SyncResult };

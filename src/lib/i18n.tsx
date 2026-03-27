@@ -170,6 +170,20 @@ const translations: Record<Language, Record<string, string>> = {
     // Footer
     'footer.rights': 'All rights reserved.',
 
+    // Offline
+    'offline.online': 'Online',
+    'offline.offline': 'Offline',
+    'offline.pendingRecords': 'pending records',
+    'offline.failedRecords': 'failed records',
+    'offline.syncingNow': 'Syncing now...',
+    'offline.willSyncWhenOnline': 'Will sync when back online',
+    'offline.syncNow': 'Sync Now',
+    'offline.syncing': 'Syncing...',
+    'offline.allSynced': 'All records synced',
+    'offline.clearFailed': 'Clear failed records',
+    'offline.savedOffline': 'Saved offline. Will sync when online.',
+    'offline.syncComplete': 'Offline records synced successfully!',
+
     // Common
     'common.loading': 'Loading...',
     'common.error': 'An error occurred',
@@ -337,6 +351,20 @@ const translations: Record<Language, Record<string, string>> = {
     // Footer
     'footer.rights': 'ಎಲ್ಲ ಹಕ್ಕುಗಳನ್ನು ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ.',
 
+    // Offline
+    'offline.online': 'ಆನ್‌ಲೈನ್',
+    'offline.offline': 'ಆಫ್‌ಲೈನ್',
+    'offline.pendingRecords': 'ಬಾಕಿ ದಾಖಲೆಗಳು',
+    'offline.failedRecords': 'ವಿಫಲ ದಾಖಲೆಗಳು',
+    'offline.syncingNow': 'ಈಗ ಸಿಂಕ್ ಆಗುತ್ತಿದೆ...',
+    'offline.willSyncWhenOnline': 'ಆನ್‌ಲೈನ್ ಬಂದಾಗ ಸಿಂಕ್ ಆಗುತ್ತದೆ',
+    'offline.syncNow': 'ಈಗ ಸಿಂಕ್ ಮಾಡಿ',
+    'offline.syncing': 'ಸಿಂಕ್ ಆಗುತ್ತಿದೆ...',
+    'offline.allSynced': 'ಎಲ್ಲಾ ದಾಖಲೆಗಳು ಸಿಂಕ್ ಆಗಿವೆ',
+    'offline.clearFailed': 'ವಿಫಲ ದಾಖಲೆಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ',
+    'offline.savedOffline': 'ಆಫ್‌ಲೈನ್ ಉಳಿಸಲಾಗಿದೆ. ಆನ್‌ಲೈನ್ ಬಂದಾಗ ಸಿಂಕ್ ಆಗುತ್ತದೆ.',
+    'offline.syncComplete': 'ಆಫ್‌ಲೈನ್ ದಾಖಲೆಗಳು ಯಶಸ್ವಿಯಾಗಿ ಸಿಂಕ್ ಆಗಿವೆ!',
+
     // Common
     'common.loading': 'ಲೋಡ್ ಆಗುತ್ತಿದೆ...',
     'common.error': 'ದೋಷ ಸಂಭವಿಸಿದೆ',
@@ -503,6 +531,20 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Footer
     'footer.rights': 'सर्वाधिकार सुरक्षित।',
+
+    // Offline
+    'offline.online': 'ऑनलाइन',
+    'offline.offline': 'ऑफ़लाइन',
+    'offline.pendingRecords': 'लंबित रिकॉर्ड',
+    'offline.failedRecords': 'विफल रिकॉर्ड',
+    'offline.syncingNow': 'अभी सिंक हो रहा है...',
+    'offline.willSyncWhenOnline': 'ऑनलाइन होने पर सिंक होगा',
+    'offline.syncNow': 'अभी सिंक करें',
+    'offline.syncing': 'सिंक हो रहा है...',
+    'offline.allSynced': 'सभी रिकॉर्ड सिंक हो गए',
+    'offline.clearFailed': 'विफल रिकॉर्ड हटाएं',
+    'offline.savedOffline': 'ऑफ़लाइन सहेजा गया। ऑनलाइन होने पर सिंक होगा।',
+    'offline.syncComplete': 'ऑफ़लाइन रिकॉर्ड सफलतापूर्वक सिंक हो गए!',
 
     // Common
     'common.loading': 'लोड हो रहा है...',

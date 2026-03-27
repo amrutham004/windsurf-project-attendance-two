@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { getAuthUser } from '@/lib/auth';
 import LogoutButton from '@/components/LogoutButton';
 import LanguageSelector from '@/components/LanguageSelector';
+import OfflineStatusIndicator from '@/components/OfflineStatusIndicator';
 import { useTranslation } from '@/lib/i18n';
 
 const Header = () => {
@@ -97,6 +98,7 @@ const Header = () => {
               </Link>
             </Button>
           ))}
+          <OfflineStatusIndicator />
           <LanguageSelector />
           <LogoutButton />
         </nav>
@@ -134,6 +136,7 @@ const Header = () => {
               </Button>
             ))}
             <div className="pt-2 border-t border-white/10 mt-2 flex items-center gap-2">
+              <OfflineStatusIndicator />
               <LanguageSelector />
               <LogoutButton />
             </div>

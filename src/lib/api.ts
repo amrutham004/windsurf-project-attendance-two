@@ -4,6 +4,7 @@
  */
 
 import { AttendanceRecord, AttendanceStatus } from '@/types/attendance';
+import { offlineManager } from '@/lib/offlineManager';
 
 // Backend API base URL - empty string means use relative URLs (goes through Vite proxy)
 const API_BASE_URL = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : 'http://localhost:8000';
@@ -30,6 +31,7 @@ interface MarkAttendanceResponse {
   studentName: string;
   confidenceScore: number;
   method: string;
+  offline?: boolean;
 }
 
 interface StudentAttendanceResponse {
@@ -71,7 +73,15 @@ export async function markAttendance(
   studentName: string,
   image: string
 ): Promise<MarkAttendanceResponse> {
+  // If clearly offline, skip the network request and store locally
+  if (!navigator.onLine) {
+    return storeOfflineAndReturn(studentId, studentName, image);
+  }
+
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
     const response = await fetch(`${API_BASE_URL}/mark-attendance`, {
       method: 'POST',
       headers: {
@@ -82,7 +92,9 @@ export async function markAttendance(
         studentName,
         image,
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const error = await response.json();
@@ -92,9 +104,36 @@ export async function markAttendance(
     const data = await response.json();
     return data;
   } catch (error) {
+    // Network errors (offline, timeout, DNS failure) → store offline
+    if (
+      error instanceof TypeError ||
+      (error instanceof DOMException && error.name === 'AbortError')
+    ) {
+      console.warn('[API] Network unavailable, saving attendance offline');
+      return storeOfflineAndReturn(studentId, studentName, image);
+    }
+    // Server-side errors (4xx/5xx with a parsed message) → re-throw
     console.error('Error marking attendance:', error);
     throw error;
   }
+}
+
+async function storeOfflineAndReturn(
+  studentId: string,
+  studentName: string,
+  image: string
+): Promise<MarkAttendanceResponse> {
+  await offlineManager.storeRecord({ studentId, studentName, image });
+  return {
+    success: true,
+    verified: true,
+    message: 'Attendance saved offline. It will sync automatically when you are back online.',
+    studentId,
+    studentName,
+    method: 'offline',
+    confidenceScore: 0,
+    offline: true,
+  };
 }
 
 /**
