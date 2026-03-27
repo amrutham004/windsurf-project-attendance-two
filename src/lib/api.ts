@@ -42,6 +42,7 @@ interface TodayStatsResponse {
   success: boolean;
   percentage: number;
   presentCount: number;
+  lateCount?: number;
   absentCount: number;
   totalStudents: number;
   date: string;
@@ -159,7 +160,7 @@ export async function getTodayStats(): Promise<{
     return {
       totalStudents: data.totalStudents,
       presentToday: data.presentCount,
-      lateToday: 0, // Backend doesn't track late separately yet
+      lateToday: data.lateCount || 0,
       absentToday: data.absentCount,
     };
   } catch (error) {
@@ -360,6 +361,39 @@ export async function getWeeklySummary(): Promise<Array<{
 /**
  * Export attendance records to CSV
  */
+/**
+ * Get attendance statistics for a specific student (calculated server-side including absent days)
+ */
+export async function getStudentStats(studentId: string): Promise<{
+  totalDays: number;
+  daysPresent: number;
+  daysLate: number;
+  daysAbsent: number;
+  attendancePercentage: number;
+}> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/attendance/student-stats?student_id=${encodeURIComponent(studentId)}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch student stats');
+    }
+
+    const data = await response.json();
+    return {
+      totalDays: data.totalDays || 0,
+      daysPresent: data.daysPresent || 0,
+      daysLate: data.daysLate || 0,
+      daysAbsent: data.daysAbsent || 0,
+      attendancePercentage: data.attendancePercentage || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching student stats:', error);
+    return { totalDays: 0, daysPresent: 0, daysLate: 0, daysAbsent: 0, attendancePercentage: 0 };
+  }
+}
+
 /**
  * Get recent attendance events for cross-device sync notifications
  * Pass 'since' timestamp to only get new events

@@ -356,6 +356,87 @@ def seed_initial_students():
 init_db()
 seed_initial_students()
 
+# ========================================
+# Absent Marking: Auto-mark students absent at midnight
+# ========================================
+
+def mark_absent_students_for_date(target_date: str):
+    """Insert ABSENT records for all students who did not mark attendance on the given date."""
+    try:
+        conn = sqlite3.connect(str(DB_FILE.absolute()))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Get all registered students
+        cursor.execute('SELECT student_id, name FROM students')
+        all_students = cursor.fetchall()
+        
+        # Get students who already have attendance for this date
+        cursor.execute('SELECT student_id FROM attendance WHERE date = ?', (target_date,))
+        present_ids = {row['student_id'] for row in cursor.fetchall()}
+        
+        absent_count = 0
+        for student in all_students:
+            if student['student_id'] not in present_ids:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO attendance 
+                    (student_id, student_name, date, check_in_time, method, confidence_score)
+                    VALUES (?, ?, ?, '', 'auto_absent', 0)
+                ''', (student['student_id'], student['name'], target_date))
+                absent_count += 1
+        
+        conn.commit()
+        conn.close()
+        
+        if absent_count > 0:
+            logger.info(f"AUTO_ABSENT: Marked {absent_count} students absent for {target_date}")
+            print(f"✅ Marked {absent_count} students absent for {target_date}")
+        return absent_count
+    except Exception as e:
+        logger.error(f"Error marking absent students for {target_date}: {e}")
+        return 0
+
+def catch_up_absent_records():
+    """On startup, mark absent for any past days (last 30 days) that are missing absent records.
+    This handles cases where the server was off at midnight."""
+    try:
+        today = get_current_date_ist()
+        for days_ago in range(1, 31):  # Check last 30 days
+            past_date = today - timedelta(days=days_ago)
+            date_str = format_date_for_db(past_date)
+            mark_absent_students_for_date(date_str)
+    except Exception as e:
+        logger.error(f"Error in catch_up_absent_records: {e}")
+
+def midnight_absent_scheduler():
+    """Background thread that marks absent students at midnight IST every day."""
+    while True:
+        try:
+            now = datetime.now(IST)
+            # Calculate seconds until next midnight
+            tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=5, microsecond=0)
+            wait_seconds = (tomorrow - now).total_seconds()
+            
+            logger.info(f"SCHEDULER: Next absent check in {wait_seconds:.0f} seconds (at midnight IST)")
+            time.sleep(wait_seconds)
+            
+            # It's now just past midnight — mark absent for yesterday
+            yesterday = get_current_date_ist() - timedelta(days=1)
+            date_str = format_date_for_db(yesterday)
+            mark_absent_students_for_date(date_str)
+            
+        except Exception as e:
+            logger.error(f"Midnight scheduler error: {e}")
+            time.sleep(60)  # Wait a minute before retrying
+
+# Run catch-up for past days on startup
+catch_up_absent_records()
+
+# Start midnight scheduler in background thread
+_absent_thread = Thread(target=midnight_absent_scheduler, daemon=True)
+_absent_thread.start()
+print("✅ Midnight absent scheduler started")
+
 # Face Encoding Functions
 def load_encodings():
     if ENCODINGS_FILE.exists():
@@ -1425,21 +1506,31 @@ async def get_today_stats():
         cursor.execute('SELECT COUNT(*) as count FROM students')
         total_students = cursor.fetchone()['count']
         
+        # Count students who actually marked attendance (exclude auto_absent)
         cursor.execute(
-            'SELECT COUNT(DISTINCT student_id) as count FROM attendance WHERE date = ?',
+            "SELECT COUNT(DISTINCT student_id) as count FROM attendance WHERE date = ? AND method != 'auto_absent'",
             (today,)
         )
         present_count = cursor.fetchone()['count']
         
+        # Count late arrivals (check_in_time after 13:00)
+        cursor.execute(
+            "SELECT COUNT(DISTINCT student_id) as count FROM attendance WHERE date = ? AND method != 'auto_absent' AND check_in_time > '13:00:00'",
+            (today,)
+        )
+        late_count = cursor.fetchone()['count']
+        
         conn.close()
         
         absent_count = total_students - present_count
+        on_time_count = present_count - late_count
         percentage = round((present_count / total_students * 100), 1) if total_students > 0 else 0
         
         return {
             "success": True,
             "percentage": percentage,
-            "presentCount": present_count,
+            "presentCount": on_time_count,
+            "lateCount": late_count,
             "absentCount": absent_count,
             "totalStudents": total_students,
             "date": today
@@ -1505,6 +1596,58 @@ async def get_today_attendance_list():
             "date": today
         }
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/attendance/student-stats")
+async def get_student_stats(student_id: str = Query(...)):
+    """Get attendance statistics for a specific student, including absent days."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Total days with any record (present, late, or absent)
+        cursor.execute(
+            'SELECT COUNT(*) as count FROM attendance WHERE student_id = ?',
+            (student_id,)
+        )
+        total_days = cursor.fetchone()['count']
+        
+        # Present on time (not auto_absent and check_in_time <= 13:00)
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM attendance WHERE student_id = ? AND method != 'auto_absent' AND check_in_time != '' AND check_in_time <= '13:00:00'",
+            (student_id,)
+        )
+        present_days = cursor.fetchone()['count']
+        
+        # Late (not auto_absent and check_in_time > 13:00)
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM attendance WHERE student_id = ? AND method != 'auto_absent' AND check_in_time != '' AND check_in_time > '13:00:00'",
+            (student_id,)
+        )
+        late_days = cursor.fetchone()['count']
+        
+        # Absent (auto_absent or empty check_in_time)
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM attendance WHERE student_id = ? AND (method = 'auto_absent' OR check_in_time = '')",
+            (student_id,)
+        )
+        absent_days = cursor.fetchone()['count']
+        
+        conn.close()
+        
+        attended = present_days + late_days
+        percentage = round((attended / total_days * 100)) if total_days > 0 else 0
+        
+        return {
+            "success": True,
+            "studentId": student_id,
+            "totalDays": total_days,
+            "daysPresent": present_days,
+            "daysLate": late_days,
+            "daysAbsent": absent_days,
+            "attendancePercentage": percentage
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

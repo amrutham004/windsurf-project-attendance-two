@@ -5,7 +5,8 @@ import Scene3D from '@/components/3d/Scene3D';
 import FloatingCard from '@/components/3d/FloatingCard';
 import { Input } from '@/components/ui/input';
 import { 
-  getStudentAttendance
+  getStudentAttendance,
+  getStudentStats
 } from '@/lib/api';
 import { getStudentById } from '@/lib/attendanceData';
 import { StudentStats, Student, AttendanceRecord } from '@/types/attendance';
@@ -26,22 +27,18 @@ const StudentDashboard = () => {
     try {
       if (isManualRefresh) setIsRefreshing(true);
       
-      const records = await getStudentAttendance(student.id);
-      
-      const totalDays = records.length;
-      const presentDays = records.filter(r => r.status === 'PRESENT').length;
-      const lateDays = records.filter(r => r.status === 'LATE_PRESENT').length;
-      const absentDays = records.filter(r => r.status === 'ABSENT').length;
-      const attendancePercentage = totalDays > 0 
-        ? Math.round(((presentDays + lateDays) / totalDays) * 100) 
-        : 0;
+      // Fetch stats from backend (includes absent days auto-marked at midnight)
+      const [backendStats, records] = await Promise.all([
+        getStudentStats(student.id),
+        getStudentAttendance(student.id)
+      ]);
       
       setStats({
-        totalDays,
-        daysPresent: presentDays,
-        daysLate: lateDays,
-        daysAbsent: absentDays,
-        attendancePercentage
+        totalDays: backendStats.totalDays,
+        daysPresent: backendStats.daysPresent,
+        daysLate: backendStats.daysLate,
+        daysAbsent: backendStats.daysAbsent,
+        attendancePercentage: backendStats.attendancePercentage
       });
       
       const filteredRecords = records
