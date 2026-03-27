@@ -2,7 +2,7 @@ import { useTranslation, languageNames, Language } from '@/lib/i18n';
 import { Globe } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
-const LanguageSelector = () => {
+const LanguageSelector = ({ dropUp = false }: { dropUp?: boolean }) => {
   const { language, setLanguage } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -32,7 +32,7 @@ const LanguageSelector = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-blue-900/95 backdrop-blur-xl border border-white/15 rounded-xl shadow-2xl overflow-hidden min-w-[140px] z-50">
+        <div className={`absolute right-0 ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} bg-blue-900/95 backdrop-blur-xl border border-white/15 rounded-xl shadow-2xl overflow-hidden min-w-[140px] z-50`}>
           {languages.map((lang) => (
             <button
               key={lang}

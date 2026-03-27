@@ -149,7 +149,7 @@ const Login = () => {
 
       <footer className="relative z-10 py-4 text-center text-teal-200/50 text-sm flex items-center justify-center gap-4">
         <p>&copy; 2026 AttendaGo. {t('footer.rights')}</p>
-        <LanguageSelector />
+        <LanguageSelector dropUp />
       </footer>
     </div>
   );
