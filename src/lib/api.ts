@@ -532,3 +532,56 @@ export function exportRecordsToCSV(
     console.error('Error exporting CSV:', error);
   }
 }
+
+/**
+ * Get all registered students with face enrollment status
+ */
+export async function getStudentList(): Promise<{
+  id: string;
+  name: string;
+  grade: string;
+  hasFaceEncoding: boolean;
+}[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/students`);
+    if (!response.ok) throw new Error('Failed to fetch students');
+    const data = await response.json();
+    return data.students || [];
+  } catch (error) {
+    console.error('Error fetching student list:', error);
+    return [];
+  }
+}
+
+/**
+ * Upload a student face photo for face recognition enrollment
+ */
+export async function uploadStudentPhoto(
+  studentId: string,
+  studentName: string,
+  image: string,
+  grade?: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/upload-student-photo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentId,
+        studentName,
+        image,
+        grade: grade || '',
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to upload student photo');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error uploading student photo:', error);
+    throw error;
+  }
+}

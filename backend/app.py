@@ -145,9 +145,10 @@ STUDENTS_FOLDER = DATA_DIR / 'student_images'
 STUDENTS_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # Initialize OpenCV face recognizer if available
+OPENCV_ENCODINGS_FILE = DATA_DIR / 'opencv_face_encodings.pkl'
 opencv_recognizer = None
 if OPENCV_FACE_RECOGNITION_AVAILABLE:
-    opencv_recognizer = OpenCVFaceRecognizer(ENCODINGS_FILE, STUDENTS_FOLDER)
+    opencv_recognizer = OpenCVFaceRecognizer(OPENCV_ENCODINGS_FILE, STUDENTS_FOLDER)
 
 # In-memory tracker for recent attendance events (for cross-device sync notifications)
 # Stores last 20 events, each with timestamp, student info

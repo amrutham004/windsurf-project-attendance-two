@@ -11,7 +11,7 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, ClipboardCheck, LayoutDashboard, User, Menu, X } from 'lucide-react';
+import { Home, ClipboardCheck, LayoutDashboard, User, Menu, X, ScanFace } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
 import { getAuthUser } from '@/lib/auth';
@@ -51,6 +51,10 @@ const Header = () => {
         to: '/admin',
         label: t('nav.adminDashboard'),
         icon: LayoutDashboard
+      }, {
+        to: '/admin/face-enrollment',
+        label: t('nav.faceEnrollment'),
+        icon: ScanFace
       }];
     }
     

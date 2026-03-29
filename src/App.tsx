@@ -21,6 +21,7 @@ import TeacherQRDisplay from "./pages/TeacherQRDisplay";
 import VerifyAttendance from "./pages/VerifyAttendance";
 import StudentFaceCapture from "./pages/StudentFaceCapture";
 import AdminDashboard from "./pages/AdminDashboard";
+import FaceEnrollment from "./pages/FaceEnrollment";
 import StudentDashboard from "./pages/StudentDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -102,6 +103,14 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/face-enrollment" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <FaceEnrollment />
               </ProtectedRoute>
             } 
           />
