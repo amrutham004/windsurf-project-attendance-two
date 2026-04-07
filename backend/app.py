@@ -1798,7 +1798,7 @@ def recognize_face_from_image(image_data: bytes, expected_student_id: str = None
         
         # Use OpenCV face recognition if available
         if OPENCV_FACE_RECOGNITION_AVAILABLE and opencv_recognizer:
-            result = opencv_recognizer.recognize_face(image, confidence_threshold=60.0)
+            result = opencv_recognizer.recognize_face(image, confidence_threshold=35.0)
             
             # If no faces registered in system, use demo mode
             if not result["match"] and result.get("message") == "No faces registered in the system":

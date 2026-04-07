@@ -234,7 +234,7 @@ class OpenCVFaceRecognizer:
             logger.error(f"Error training recognizer: {e}")
             return False
     
-    def recognize_face(self, image: np.ndarray, confidence_threshold: float = 70.0) -> Dict:
+    def recognize_face(self, image: np.ndarray, confidence_threshold: float = 35.0) -> Dict:
         """
         Recognize face in an image
         
@@ -281,10 +281,18 @@ class OpenCVFaceRecognizer:
                 }
             
             # Predict face
-            label, confidence = self.recognizer.predict(face_features)
+            label, distance = self.recognizer.predict(face_features)
             
-            # Convert OpenCV confidence to our scale (lower is better in OpenCV)
-            confidence_score = max(0, 100 - confidence)
+            # Convert LBPH distance to confidence percentage (0-100)
+            # LBPH distance: 0 = perfect match, typical range 0-300+
+            # Good match: < 50, Acceptable: 50-80, Poor: 80-120, No match: > 120
+            # Use a scaling formula that maps this range to 0-100% confidence
+            if distance <= 0:
+                confidence_score = 100.0
+            else:
+                confidence_score = max(0.0, min(100.0, 100.0 * (1.0 - distance / 200.0)))
+            
+            logger.info(f"LBPH predict: label={label}, distance={distance:.2f}, confidence={confidence_score:.1f}%")
             
             # Find student ID from label
             student_id = None
