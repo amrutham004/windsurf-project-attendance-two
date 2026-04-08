@@ -97,7 +97,7 @@ app = FastAPI(
 )
 
 # Security middleware
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "*.netlify.app"])
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "172.17.84.68", "*.netlify.app"])
 app.add_middleware(SlowAPIMiddleware)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
@@ -119,6 +119,8 @@ app.add_middleware(
         "https://172.17.50.249:8080",
         "http://172.20.10.4:8080",
         "https://172.20.10.4:8080",
+        "http://172.17.84.68:8080",
+        "https://172.17.84.68:8080",
         "http://localhost:8081",
         "https://localhost:8081",
         "http://172.20.10.4:8081",

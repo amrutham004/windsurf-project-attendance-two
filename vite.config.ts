@@ -10,8 +10,8 @@ export default defineConfig(({ mode }) => ({
     host: true,
     port: 8080,
     https: {
-      key: fs.readFileSync('./localhost+4-key.pem'),
-      cert: fs.readFileSync('./localhost+4.pem'),
+      key: fs.readFileSync('./localhost+3-key.pem'),
+      cert: fs.readFileSync('./localhost+3.pem'),
     },
     proxy: {
       '/api': {
